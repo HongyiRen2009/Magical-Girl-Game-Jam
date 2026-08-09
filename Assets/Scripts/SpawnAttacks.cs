@@ -19,7 +19,12 @@ public class SpawnAttacks : MonoBehaviour
         for (int i = 0; i < AttackWaves.Length; i++)
         {
             Transform AttackWave = AttackBeatmap.transform.GetChild(i);
-            AttackWaves[i] = (AttackWave.GetComponent<AttackWave>().TimeToSpawn, AttackWave.GetComponentsInChildren<Attack>());
+            Attack[] attacks = new Attack[AttackWave.childCount];
+			for (int j = 0; j < attacks.Length; j++)
+			{
+				attacks[j] = AttackWave.GetChild(j).GetComponent<Spawner>().objectToSpawn.GetComponent<Attack>();
+			}
+            AttackWaves[currentWaveIndex] = (AttackWave.GetComponent<AttackWave>().TimeToSpawn, attacks);
 		}
         Array.Sort(AttackWaves, (a, b) => a.Item1.CompareTo(b.Item1));
     }

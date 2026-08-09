@@ -2,7 +2,7 @@ using System.Net;
 using UnityEditor;
 using UnityEngine;
 
-public class LaserSpawner : MonoBehaviour
+public class LaserSpawner : Spawner
 {
 	public float width = 1f;
 	public float length = 5f;

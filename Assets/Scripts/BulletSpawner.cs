@@ -1,6 +1,8 @@
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
-public class BulletSpawner : MonoBehaviour
+public class BulletSpawner : Spawner
 {
     public float speed = 1f;
     public float lifeTime = 1f;
@@ -15,11 +17,13 @@ public class BulletSpawner : MonoBehaviour
     void Update()
     {
     }
+#if UNITY_EDITOR
+	private void OnDrawGizmos()
+	{
+		Handles.color = Color.red;
+		Handles.DrawLine(transform.position, transform.position + transform.right * speed * lifeTime);
+        Handles.DrawSolidDisc(transform.position, Vector3.forward, size);
 
-    private void OnDrawGizmos()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawLine(transform.position, transform.position + transform.right * speed * lifeTime);
-        Gizmos.DrawWireSphere(transform.position, size);
-    }
+	}
+#endif
 }
