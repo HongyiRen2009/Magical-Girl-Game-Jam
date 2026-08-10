@@ -42,4 +42,9 @@ public class PlayerMovement : MonoBehaviour
         movementInput = movementAction.action.ReadValue<Vector2>();
         transform.position += (Vector3)movementInput.normalized * movementSpeed*Time.deltaTime;
     }
+
+    public void Damaged(GameObject projectile)
+    {
+        Debug.Log("I have been hit!!!!");
+    }
 }
