@@ -337,6 +337,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
+    - target: {fileID: 5094330685556617126, guid: 7f0bd79b6717f30489be06da978f5ab4, type: 3}
+      propertyPath: dashAction
+      value: 
+      objectReference: {fileID: -7471211009204490832, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     - target: {fileID: 6981787509068544236, guid: 7f0bd79b6717f30489be06da978f5ab4, type: 3}
       propertyPath: m_LocalPosition.x
       value: 4.5608816
