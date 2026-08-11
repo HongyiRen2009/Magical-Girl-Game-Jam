@@ -84,6 +84,7 @@ public class Attack : MonoBehaviour
     {
 
 		Gizmos.color = Color.coral;
+		Handles.color = Color.coral;
 		Gizmos.DrawWireSphere(transform.position, 0.5f);
 		if (useSpray)
 		{
@@ -91,14 +92,17 @@ public class Attack : MonoBehaviour
 			Vector3 FirstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
 			Vector3 SecondEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
 			Vector3 Center = transform.position + new Vector3(Mathf.Cos(transform.eulerAngles.z * Mathf.Deg2Rad), Mathf.Sin(transform.eulerAngles.z * Mathf.Deg2Rad), 0) * speed * lifetime;
+
 			Gizmos.DrawLine(transform.position, FirstEnd);
 			Gizmos.DrawLine(transform.position, SecondEnd);
+
 			#if UNITY_EDITOR
-				Handles.DrawBezier(FirstEnd, SecondEnd, Center, Center, Color.coral, null, 2f);
+				Handles.DrawWireArc(transform.position,Vector3.forward,FirstEnd - transform.position,-spread,speed * lifetime);
 			#endif
+
 		}
 		// Draw a cone for the spread of the burst or draw lines for each projectile in the burst if spreads evenly
-		if(burstDrawIndex < 0 || burstDrawIndex >= bursts.Length || !useBursts)
+		if (burstDrawIndex < 0 || burstDrawIndex >= bursts.Length || !useBursts)
 		{
 			return;
 		}
@@ -117,10 +121,13 @@ public class Attack : MonoBehaviour
 			float burstspread = burst.spread;
 			Vector3 BurstFirstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
 			Vector3 BurstSecondEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
+			Vector3 BurstCenter = transform.position + new Vector3(Mathf.Cos(transform.eulerAngles.z * Mathf.Deg2Rad), Mathf.Sin(transform.eulerAngles.z * Mathf.Deg2Rad), 0) * speed * lifetime;
 			Gizmos.DrawLine(transform.position, BurstFirstEnd);
 			Gizmos.DrawLine(transform.position, BurstSecondEnd);
-			Gizmos.DrawLine(BurstFirstEnd, BurstSecondEnd);
+			#if UNITY_EDITOR
+						Handles.DrawWireArc(transform.position, Vector3.forward, BurstFirstEnd - transform.position, -burstspread, speed * lifetime);
+			#endif
 		}
-		
+
 	}
 }

@@ -161,19 +161,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: speed
-      value: 5
+      value: 5.28
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: spread
-      value: 147.8
+      value: 68.91
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: duration
-      value: 10
+      value: 100
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: lifetime
-      value: 3.58
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: useSpray
