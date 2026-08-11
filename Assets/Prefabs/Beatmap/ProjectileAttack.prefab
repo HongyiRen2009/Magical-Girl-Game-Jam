@@ -44,12 +44,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d255c7d2301c1b54e93a3fb82db8add2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Attack
-  projectilePrefab: {fileID: 0}
+  projectilePrefab: {fileID: 3538431447571615191, guid: 83769a18d6d73d143982247fe1326585, type: 3}
   speed: 1
   acceleration: 1
   lifetime: 1
+  useSpray: 1
+  useBursts: 0
   duration: 1
   delay: 0.1
-  bursts: []
   spread: 0
   distanceVariability: 0
+  bursts: []
+  burstDrawIndex: 0

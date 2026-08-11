@@ -1,5 +1,6 @@
 using System.Collections;
 using NaughtyAttributes;
+using UnityEditor;
 using UnityEngine;
 
 public class Attack : MonoBehaviour
@@ -46,26 +47,36 @@ public class Attack : MonoBehaviour
 		StartCoroutine(ExecuteBursts());
 	}
 	private IEnumerator ExecuteSpray(){
-		for(int i = 0;i<duration/ delay; i++)
+		if(!useSpray)
+		{
+			yield break;
+		}
+		for (int i = 0;i<duration/ delay; i++)
 		{
 			float randomAngleOffset = Random.Range(-spread / 2, spread / 2);
 			float randomDistanceOffset = Random.Range(-distanceVariability / 2, distanceVariability / 2);
-			GameObject bullet = Instantiate(projectilePrefab, transform.position + transform.right * randomDistanceOffset, Quaternion.Euler(new Vector3(0, 0, transform.eulerAngles.z + randomAngleOffset)));
+			GameObject projectile = Instantiate(projectilePrefab, transform.position + transform.right * randomDistanceOffset, Quaternion.Euler(new Vector3(0, 0, transform.eulerAngles.z + randomAngleOffset)));
+			projectile.GetComponent<Projectile>().Initialize(speed, acceleration, lifetime);
 			yield return new WaitForSeconds(delay);
 		}
 
 	}
 	private IEnumerator ExecuteBursts(){
+		if(!useBursts || bursts.Length == 0)
+		{
+			yield break;
+		}
 		for (int i = 0; i < bursts.Length; i++)
 		{
 			float currentAngleOffset = -bursts[i].spread / 2;
 			for (int j = 0; j < bursts[i].projectileNum; j++)
 			{
 				float randomAngleOffset = Random.Range(-spread / 2, spread / 2);
-				GameObject bullet = Instantiate(projectilePrefab, transform.position, Quaternion.Euler(new Vector3(0, 0,transform.eulerAngles.z+ (bursts[i].spawnsEvenly ? currentAngleOffset : randomAngleOffset))));
+				GameObject projectile = Instantiate(projectilePrefab, transform.position, Quaternion.Euler(new Vector3(0, 0,transform.eulerAngles.z+ (bursts[i].spawnsEvenly ? currentAngleOffset : randomAngleOffset))));
+				projectile.GetComponent<Projectile>().Initialize(speed, acceleration, lifetime);
 				currentAngleOffset += bursts[i].spread / (bursts[i].projectileNum - 1);
-				yield return new WaitForSeconds(bursts[i].delay);
 			}
+			yield return new WaitForSeconds(bursts[i].delay);
 		}
 	}
 
@@ -79,9 +90,12 @@ public class Attack : MonoBehaviour
 			// Draw a cone for the spread of the attack
 			Vector3 FirstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
 			Vector3 SecondEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
+			Vector3 Center = transform.position + new Vector3(Mathf.Cos(transform.eulerAngles.z * Mathf.Deg2Rad), Mathf.Sin(transform.eulerAngles.z * Mathf.Deg2Rad), 0) * speed * lifetime;
 			Gizmos.DrawLine(transform.position, FirstEnd);
 			Gizmos.DrawLine(transform.position, SecondEnd);
-			Gizmos.DrawLine(FirstEnd, SecondEnd);
+			#if UNITY_EDITOR
+				Handles.DrawBezier(FirstEnd, SecondEnd, Center, Center, Color.coral, null, 2f);
+			#endif
 		}
 		// Draw a cone for the spread of the burst or draw lines for each projectile in the burst if spreads evenly
 		if(burstDrawIndex < 0 || burstDrawIndex >= bursts.Length || !useBursts)

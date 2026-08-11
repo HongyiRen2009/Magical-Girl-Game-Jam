@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
-	[SerializeField] float angle = 0; // angle is the direction by which the bullet is travelling in (in RADIANS)
     [SerializeField] float speed = 1; // speed determines the speed that the bullets travel
     [SerializeField] float acceleration = 0; // the rate at which the speed increases
     [SerializeField] float lifetime = 0; // the time in seconds that the bullets last. If it is <= 0 than the bullet will not expire
@@ -10,25 +9,20 @@ public class Projectile : MonoBehaviour
     static float offscreenDespawnDistance = 10f; // determines the distance from the center of the screen that all bullets will despawn at
 
     float age = 0; // the time that the bullet has been alive for
-    float lastAngle = 0;
-    Vector3 travelDirection;
 
     void Start()
     {
-        lastAngle = angle;
-        travelDirection = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0);
     }
+    public void Initialize(float speed, float acceleration, float lifetime){
+        this.speed = speed;
+        this.acceleration = acceleration;
+        this.lifetime = lifetime;
 
+    }
     void FixedUpdate()
     {
-        // this is to make bullets less computaionaly intensive
-        if (lastAngle != angle)
-        {
-            travelDirection = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0);
-        }
-        lastAngle = angle;
 
-        gameObject.transform.position += travelDirection * speed * Time.fixedDeltaTime;
+        gameObject.transform.position += transform.right * speed * Time.fixedDeltaTime;
 
         speed += acceleration;
 
