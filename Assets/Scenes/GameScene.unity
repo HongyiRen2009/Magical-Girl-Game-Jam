@@ -243,8 +243,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: '::'
   movementAction: {fileID: -3073730528549540538, guid: 1f4ad7d94a8d58144bda5d06c4f194a8, type: 3}
   dashAction: {fileID: -2604932399580266404, guid: 1f4ad7d94a8d58144bda5d06c4f194a8, type: 3}
-  movementSpeed: 5
-  dashCooldown: 2
+  movementSpeed: 12
+  dashDistance: 4
+  dashDuration: 0.2
+  dashCooldown: 0.55
+  dashBufferDuration: 0.12
+  parryBuffer: 0.1
+  dashPeakTime: 0.4
+  parryColor: {r: 0.7509433, g: 0.2701316, b: 0.20828049, a: 1}
 --- !u!212 &1925669195
 SpriteRenderer:
   serializedVersion: 2
