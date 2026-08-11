@@ -14,7 +14,7 @@ public class M_Laser : Mod
     [SerializeField] float travelTime; // the time (in seconds) that it takes for the beam to reach and retract from the target
     [SerializeField] bool localTransform; // determines if the target position is a child of the position of the bullet or not
 
-    [SerializeField] GameObject projectile;
+    [SerializeField] GameObject projectilePrefab;
     [SerializeField] Sprite sprite;
     [SerializeField] float width;
 
@@ -26,12 +26,22 @@ public class M_Laser : Mod
 
     public override void Begin(Projectile projectile)
     {
-        Debug.Log("begun");
+        base.Begin(projectile);
+
+        // Debug.Log("begun");
         // creating the projectile that will repersent the target
-        GameObject projObject = Instantiate(this.projectile, targetPosition, Quaternion.Euler(new Vector3(0, 0, angle)));
+        GameObject projObject = Instantiate(projectilePrefab, targetPosition, Quaternion.Euler(new Vector3(0, 0, angle)));
+
+        if (localTransform)
+        {
+            projObject.transform.parent = projectile.transform;
+        }
 
         targetProj = projObject.GetComponent<Projectile>();
         targetProj.Initialize(speed, acceleration, 0, false);
+        targetProj.DisableOffscreenDespawn();
+
+        Debug.Log(targetProj);
 
         // creating the laser object
         laser = new GameObject();
@@ -46,19 +56,18 @@ public class M_Laser : Mod
 
         // initilizing the lazer hitbox
         collider = laser.AddComponent<BoxCollider2D>();
-        collider.size = Vector3.one * width;
+        collider.isTrigger = true;
 
         UpdateLaser(projectile);
     }
-	public override void Run(Projectile projectile) 
+	public override void Run() 
     {
         UpdateLaser(projectile);
     }
 
     void UpdateLaser(Projectile projectile)
     {
-        Debug.Log("updating laser");
-        Debug.Log(renderer);
+        // Debug.Log("update laser");
         Vector3 targetDirection = targetProj.transform.position - projectile.transform.position;
 
         Vector3 laserSize = new Vector3(width, targetDirection.magnitude);
@@ -67,9 +76,10 @@ public class M_Laser : Mod
         collider.size = laserSize;
 
         laser.transform.position = projectile.transform.position + targetDirection/2;
-        laser.transform.rotation = Quaternion.Euler(new Vector3(0, 0, 90 + Mathf.Atan2(targetDirection.y, targetDirection.x)));
+        laser.transform.up = targetDirection;
     }
-    public override void End(Projectile projectile) 
+
+    public override void End() 
     {
         Destroy(laser);
         targetProj.Despawn();
@@ -80,6 +90,10 @@ public class Laser : MonoBehaviour
 {
     void OnTriggerEnter2D(Collider2D collision)
     {
-        Debug.Log("laser has hit the player");
+        if (collision.tag == "Player")
+        {
+            Debug.Log("laser has hit the player");
+            collision.GetComponent<PlayerMovement>().Damaged(gameObject);
+        }
     }
 }

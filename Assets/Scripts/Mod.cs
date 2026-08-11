@@ -3,7 +3,9 @@ using UnityEngine;
 
 public abstract class Mod : ScriptableObject
 {
-	public abstract void Begin(Projectile projectile);
-	public abstract void Run(Projectile projectile);
-	public abstract void End(Projectile projectile);
+	protected Projectile projectile;
+
+	public virtual void Begin(Projectile projectile) {this.projectile = projectile;}
+	public abstract void Run();
+	public abstract void End();
 }

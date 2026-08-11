@@ -6,22 +6,23 @@ public class Projectile : MonoBehaviour
     [SerializeField] float speed = 1; // speed determines the speed that the bullets travel
     [SerializeField] float acceleration = 0; // the rate at which the speed increases
     [SerializeField] float lifetime = 0; // the time in seconds that the bullets last. If it is <= 0 than the bullet will not expire
+    [SerializeField] bool despawnOffscreen = true;
     [SerializeField] bool visible = true;
 
     [SerializeField] Mod[] mods; // any mods which will be applyed to the bullet
 
-    static float offscreenDespawnDistance = 10f; // determines the distance from the center of the screen that all bullets will despawn at
+    static float offscreenDespawnDistance = 30f; // determines the distance from the center of the screen that all bullets will despawn at
 
     float age = 0; // the time that the bullet has been alive for
 
     public void Start()
     {
-        Debug.Log("ran start");
-        Debug.Log(mods[0]);
+        // Debug.Log("ran start");
+        // Debug.Log(mods[0]);
         // mods
         foreach (Mod mod in mods)
         {
-            Debug.Log("running the begin func");
+            // Debug.Log("running the begin func");
             mod.Begin(this);
         }
 
@@ -44,7 +45,10 @@ public class Projectile : MonoBehaviour
         speed += acceleration;
 
         // offscreen check
-        CheckIfOffscreen();
+        if (despawnOffscreen)
+        {
+            CheckIfOffscreen();
+        }
 
         // lifetime check
         age += Time.fixedDeltaTime;
@@ -56,11 +60,12 @@ public class Projectile : MonoBehaviour
         // mods
         foreach (Mod mod in mods)
         {
-            Debug.Log("running mod run");
-            mod.Run(this);
+            // Debug.Log("running mod run");
+            mod.Run();
         }
     }
 
+    public void DisableOffscreenDespawn() {despawnOffscreen = false;}
     void CheckIfOffscreen()
     {
         /* 
@@ -90,7 +95,7 @@ public class Projectile : MonoBehaviour
         // mods
         foreach (Mod mod in mods)
         {
-            mod.End(this);
+            mod.End();
         }
 
         // later on we should create a manager to manage object pooling, because we really shouldnt be instantiateing and destroying so many bullets. Its not great on performance...
