@@ -1,6 +1,9 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
-public abstract class Mod : MonoBehaviour
+public abstract class Mod : ScriptableObject
 {
-	// this will have stuff later, im just making this so that i can make bullet
+	public abstract void Begin(Projectile projectile);
+	public abstract void Run(Projectile projectile);
+	public abstract void End(Projectile projectile);
 }
