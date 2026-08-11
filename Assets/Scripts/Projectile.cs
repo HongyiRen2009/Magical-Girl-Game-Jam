@@ -42,10 +42,11 @@ public class Projectile : MonoBehaviour
             this is not the correct equation to determine distance from the center, but it works well enough and saves on processing power
             it also assumes that the camera is at 0, 0, which shouldnt be an issue...?
         */ 
-        if (transform.position.x + transform.position.y > offscreenDespawnDistance)
-        {
-            Despawn();
-        }
+        // This doesn't work right now
+        //if (transform.position.x + transform.position.y > offscreenDespawnDistance)
+        //{
+        //    Despawn();
+        //}
     }
 
     void OnTriggerEnter2D(Collider2D collision)
