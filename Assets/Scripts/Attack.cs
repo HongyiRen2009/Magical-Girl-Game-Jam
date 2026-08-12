@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using NaughtyAttributes;
 using UnityEditor;
 using UnityEngine;
@@ -93,7 +94,12 @@ public class Attack : MonoBehaviour
 			}
 			spawnPosition += transform.right * randomDistanceOffset;
 			GameObject projectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.Euler(new Vector3(0, 0, transform.eulerAngles.z + randomAngleOffset)));
-			projectile.GetComponent<Projectile>().Initialize(lifetime,projectileMods);
+			Mod[] deepCopiedMods = new Mod[projectileMods.Length];
+			for (int j = 0; j < projectileMods.Length; j++)
+			{
+				deepCopiedMods[j] = (Mod)projectileMods[j].Clone();
+			}
+			projectile.GetComponent<Projectile>().Initialize(lifetime, deepCopiedMods);
 			yield return new WaitForSeconds(delay);
 		}
 
@@ -127,7 +133,12 @@ public class Attack : MonoBehaviour
 							break;
 					}
 					GameObject projectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.Euler(new Vector3(0, 0, transform.eulerAngles.z + (bursts[i].spawnsEvenly ? currentAngleOffset : randomAngleOffset))));
-					projectile.GetComponent<Projectile>().Initialize(lifetime,projectileMods);
+					Mod[] deepCopiedMods = new Mod[projectileMods.Length];
+					for (int l = 0; l < projectileMods.Length; l++)
+					{
+						deepCopiedMods[l] = (Mod)projectileMods[l].Clone();
+					}
+					projectile.GetComponent<Projectile>().Initialize(lifetime, deepCopiedMods);
 					currentAngleOffset += bursts[i].spread / (bursts[i].projectileNum - 1);
 				}
 				yield return new WaitForSeconds(bursts[i].delay);
