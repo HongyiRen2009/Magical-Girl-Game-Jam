@@ -32,7 +32,7 @@ public class SpawnAttacks : MonoBehaviour
         {
             foreach (var attack in AttackWaves[currentWaveIndex].Item2)
             {
-                attack.ExecuteAttack();
+                // attack.ExecuteAttack();
             }
             currentWaveIndex++;
         }

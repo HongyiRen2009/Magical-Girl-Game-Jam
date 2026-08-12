@@ -1,12 +1,13 @@
 using System;
 using System.Collections;
 using NaughtyAttributes;
-using Unity.VisualScripting;
 using UnityEngine;
+
+
 
 // coroutines dont exist in scipts not inheritting from MonoBehavior. so please dont judge me too hard
 
-[CreateAssetMenu(fileName = "PathMod", menuName = "Bullet Mods/Path Mod")]
+[Serializable]
 public class M_Path : Mod
 {
     [SerializeField] Path[] paths;

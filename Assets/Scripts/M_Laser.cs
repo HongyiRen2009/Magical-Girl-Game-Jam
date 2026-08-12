@@ -1,7 +1,8 @@
 using Unity.VisualScripting;
 using UnityEngine;
+using System;
 
-[CreateAssetMenu(fileName = "LaserMod", menuName = "Bullet Mods/Laser Mod")]
+[Serializable]
 public class M_Laser : Mod
 {
     [Header("Target settings")]
@@ -35,39 +36,39 @@ public class M_Laser : Mod
 
     public override void Begin(Projectile projectile)
     {
-        base.Begin(projectile);
+        // base.Begin(projectile);
 
-        // Debug.Log("begun");
-        // creating the projectile that will repersent the target
-        GameObject projObject = Instantiate(projectilePrefab, targetPosition, Quaternion.Euler(new Vector3(0, 0, angle)));
+        // // Debug.Log("begun");
+        // // creating the projectile that will repersent the target
+        // GameObject projObject = Instantiate(projectilePrefab, targetPosition, Quaternion.Euler(new Vector3(0, 0, angle)));
 
-        if (localTransform)
-        {
-            projObject.transform.parent = projectile.transform;
-        }
+        // if (localTransform)
+        // {
+        //     projObject.transform.parent = projectile.transform;
+        // }
 
-        targetProj = projObject.GetComponent<Projectile>();
-        targetProj.Initialize(speed, acceleration, 0, false);
-        targetProj.DisableOffscreenDespawn();
+        // targetProj = projObject.GetComponent<Projectile>();
+        // targetProj.Initialize(speed, acceleration, 0, false);
+        // targetProj.DisableOffscreenDespawn();
 
-        // Debug.Log(targetProj);
+        // // Debug.Log(targetProj);
 
-        // creating the laser object
-        laser = new GameObject();
+        // // creating the laser object
+        // laser = new GameObject();
 
-        // adding laser script
-        laser.AddComponent<Laser>();
+        // // adding laser script
+        // laser.AddComponent<Laser>();
 
-        // initilizing the laser renderer
-        renderer = laser.AddComponent<SpriteRenderer>();
-        renderer.sprite = sprite;
-        renderer.drawMode = SpriteDrawMode.Tiled;
+        // // initilizing the laser renderer
+        // renderer = laser.AddComponent<SpriteRenderer>();
+        // renderer.sprite = sprite;
+        // renderer.drawMode = SpriteDrawMode.Tiled;
 
-        // initilizing the lazer hitbox
-        collider = laser.AddComponent<BoxCollider2D>();
-        collider.isTrigger = true;
+        // // initilizing the lazer hitbox
+        // collider = laser.AddComponent<BoxCollider2D>();
+        // collider.isTrigger = true;
 
-        UpdateLaser(projectile);
+        // UpdateLaser(projectile);
     }
 	public override void Run() 
     {
@@ -90,8 +91,8 @@ public class M_Laser : Mod
 
     public override void End() 
     {
-        Destroy(laser);
-        targetProj.Despawn();
+        // Destroy(laser);
+        // targetProj.Despawn();
     }
 
     private void OnValidate()

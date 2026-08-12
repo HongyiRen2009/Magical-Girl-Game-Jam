@@ -1,7 +1,9 @@
+using System;
 using Unity.VisualScripting;
 using UnityEngine;
 
-public abstract class Mod : ScriptableObject
+[Serializable]
+public abstract class Mod
 {
 	protected Projectile projectile;
 
