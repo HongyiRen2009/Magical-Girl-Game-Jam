@@ -5,7 +5,7 @@ public class Projectile : MonoBehaviour
 {
     [SerializeField] float lifetime = 0; // the time in seconds that the bullets last. If it is <= 0 than the bullet will not expire
 
-    [SerializeField] Mod[] mods; // any mods which will be applyed to the bullet
+    [SubclassSelector] [SerializeReference] Mod[] mods; // any mods which will be applyed to the bullet
 
     float age = 0; // the time that the bullet has been alive for
 
@@ -25,6 +25,7 @@ public class Projectile : MonoBehaviour
 
         this.mods = mods;
     }
+
     void FixedUpdate()
     {
         // lifetime check
