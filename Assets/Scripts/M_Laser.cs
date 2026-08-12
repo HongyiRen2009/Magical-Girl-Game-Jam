@@ -1,8 +1,10 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "LaserMod", menuName = "Bullet Mods/Laser Mod")]
 public class M_Laser : Mod
 {
+    [Header("Target settings")]
     [SerializeField] Vector3 targetPosition; // the second position that the laser will draw itself to
     [SerializeField] float angle; // the angle by which the target will travel in
     [SerializeField] float speed; // the speed by which the target will move
@@ -10,18 +12,25 @@ public class M_Laser : Mod
 
     [SerializeField] Mod[] mods; // these are the mods which are attached to the target
 
+    [Header("Laser settings")]
     [SerializeField] float delay; // time (in seconds) in which the laser is delayed (in this time, some telegraph would be played)
     [SerializeField] float travelTime; // the time (in seconds) that it takes for the beam to reach and retract from the target
     [SerializeField] bool localTransform; // determines if the target position is a child of the position of the bullet or not
 
-    [SerializeField] GameObject projectilePrefab;
     [SerializeField] Sprite sprite;
     [SerializeField] float width;
 
+    [Header("Projectile")]
+    [SerializeField] GameObject projectilePrefab;
+
+    // runtime variables
     GameObject laser;
     SpriteRenderer renderer;
     BoxCollider2D collider;
     Projectile targetProj;
+
+    [Header("Gizmos")]
+    [SerializeField] bool drawGizmos;
 
 
     public override void Begin(Projectile projectile)
@@ -41,7 +50,7 @@ public class M_Laser : Mod
         targetProj.Initialize(speed, acceleration, 0, false);
         targetProj.DisableOffscreenDespawn();
 
-        Debug.Log(targetProj);
+        // Debug.Log(targetProj);
 
         // creating the laser object
         laser = new GameObject();
@@ -83,6 +92,20 @@ public class M_Laser : Mod
     {
         Destroy(laser);
         targetProj.Despawn();
+    }
+
+    private void OnValidate()
+    {
+        if (!drawGizmos) return;
+
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawWireSphere(targetPosition, 0.2f);
+
+        if (speed != 0 || acceleration != 0)
+        {
+            Vector3 angleOffset = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0);
+            Gizmos.DrawLine(targetPosition, targetPosition + angleOffset);
+        }
     }
 }
 
