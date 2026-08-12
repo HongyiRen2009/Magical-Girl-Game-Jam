@@ -161,11 +161,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: speed
-      value: 5.28
+      value: 16.99
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: spread
-      value: 69.21
+      value: 94.25
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: duration
@@ -173,11 +173,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: lifetime
-      value: 1.89
+      value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: useSpray
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: useBursts
@@ -185,7 +185,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: useSpread
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: spawnShape
@@ -201,7 +201,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: spawnLineLength
-      value: 18
+      value: 12.17
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: projectilePrefab
@@ -209,11 +209,19 @@ PrefabInstance:
       objectReference: {fileID: 3538431447571615191, guid: 83769a18d6d73d143982247fe1326585, type: 3}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: bursts.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
+      propertyPath: distanceVariability
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
+      propertyPath: useDeterministicSpread
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: bursts.Array.data[0].delay
-      value: 0.38
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: bursts.Array.data[1].delay
@@ -221,11 +229,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: bursts.Array.data[0].spread
-      value: 127.77
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: bursts.Array.data[1].spread
       value: 68.1
+      objectReference: {fileID: 0}
+    - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
+      propertyPath: bursts.Array.data[0].endDelay
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
+      propertyPath: bursts.Array.data[0].useSpread
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
+      propertyPath: bursts.Array.data[0].repeatNums
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: bursts.Array.data[0].spawnsEvenly
@@ -237,11 +257,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: bursts.Array.data[0].projectileNum
-      value: 15
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: bursts.Array.data[1].projectileNum
       value: 96
+      objectReference: {fileID: 0}
+    - target: {fileID: -4036484609753681509, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
+      propertyPath: bursts.Array.data[0].useDeterministicSpread
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 408340474607822031, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
       propertyPath: m_LocalPosition.x
