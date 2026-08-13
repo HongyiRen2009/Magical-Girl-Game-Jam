@@ -119,15 +119,15 @@ public class Point
                 Vector3 pPosition = new Vector3(Mathf.Cos(angle)*radius, Mathf.Sin(angle)*radius, 0);
                 pPosition += position;
 
-                for (float cAngle = angle + 0.1f; cAngle < gotoAngle; cAngle += 0.1f)
-                {
-                    Vector3 cPosition = new Vector3(Mathf.Cos(cAngle)*radius, Mathf.Sin(cAngle)*radius, 0);
-                    cPosition += position;
+                // for (clockwise ? (float cAngle = angle + 0.1f; cAngle < gotoAngle; cAngle += 0.1f) : (float cAngle = angle + 0.1f; cAngle < gotoAngle; cAngle += 0.1f))
+                // {
+                //     Vector3 cPosition = new Vector3(Mathf.Cos(cAngle)*radius, Mathf.Sin(cAngle)*radius, 0);
+                //     cPosition += position;
 
-                    Gizmos.DrawLine(cPosition, pPosition);
+                //     Gizmos.DrawLine(cPosition, pPosition);
 
-                    pPosition = cPosition;
-                }
+                //     pPosition = cPosition;
+                // }
 
                 Gizmos.DrawLine(pPosition, new Vector3(Mathf.Cos(gotoAngle)*radius, Mathf.Sin(gotoAngle)*radius, 0) + position);
             }
