@@ -5,10 +5,19 @@ public class Projectile : MonoBehaviour
 {
     [SerializeField] float lifetime = 0; // the time in seconds that the bullets last. If it is <= 0 than the bullet will not expire
 
-    Mod[] mods; // any mods which will be applyed to the bullet
+    [SerializeReference] [SubclassSelector] Mod[] mods; // any mods which will be applyed to the bullet
 
     float age = 0; // the time that the bullet has been alive for
 
+    public void Start()
+    {
+        foreach (Mod mod in mods)
+		{
+			// Debug.Log("running the begin func");
+			mod.Begin(this);
+		}
+    }
+    
     public void Initialize(float lifetime = 0, Mod[] mods = null)
     {
         this.lifetime = lifetime;
@@ -58,5 +67,13 @@ public class Projectile : MonoBehaviour
 
         // later on we should create a manager to manage object pooling, because we really shouldnt be instantiateing and destroying so many bullets. Its not great on performance...
         Destroy(gameObject);
+    }
+
+    void OnDrawGizmos()
+    {
+        foreach (Mod mod in mods)
+        {
+            mod.DrawGizmos();
+        }
     }
 }

@@ -9,5 +9,7 @@ public abstract class Mod
 
 	public virtual void Begin(Projectile projectile) {this.projectile = projectile;}
 	public abstract void Run();
-	public abstract void End();
+	public virtual void End() {return;}
+
+	public virtual void DrawGizmos() {return;}
 }
