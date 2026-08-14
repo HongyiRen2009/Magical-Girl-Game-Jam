@@ -13,12 +13,16 @@ public class M_Movement : Mod
     [AllowNesting] [HideIf("followPath")] [SerializeField] float acceleration;
 
     [AllowNesting] [HideIf("followPath")] [SerializeField] bool tracking;
-    [AllowNesting] [ShowIf("tracking")] [SerializeField] float rotationSpeed;
-    [AllowNesting] [ShowIf("tracking")] [SerializeField] bool pinpointLocation;
-    [AllowNesting] [ShowIf(EConditionOperator.And, "followPath", "pinpointLocation")] [SerializeField] bool trackX = true;
-    [AllowNesting] [ShowIf(EConditionOperator.And, "followPath", "pinpointLocation")] [SerializeField] bool trackY = true;
-    [AllowNesting] [ShowIf(EConditionOperator.And, "followPath", "pinpointLocation")] [SerializeField] bool pinpointSpeed;
-    [AllowNesting] [ShowIf(EConditionOperator.And, "followPath", "pinpointLocation")] [SerializeField] bool maxPSpeedDistance;
+
+    bool _tracking => tracking && !followPath;
+    [AllowNesting] [ShowIf("_tracking")] [SerializeField] float rotationSpeed;
+    [AllowNesting] [ShowIf("_tracking")] [SerializeField] bool pinpointLocation;
+
+    bool _pinpointing => pinpointLocation && !followPath;
+    [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] bool trackX = true;
+    [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] bool trackY = true;
+    [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] float pinpointSpeed;
+    [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] float maxPSpeedDistance;
 
     [AllowNesting] [ShowIf("followPath")] [SerializeField] Vector3 start;
     [AllowNesting] [ShowIf("followPath")] [SerializeField] bool destroyOnFinish = true;
@@ -49,9 +53,9 @@ public class M_Movement : Mod
 
             if (points.Length > currentPoint)
             {
-                if (elapsed > points[currentPoint].time)
+                if (elapsed > points[currentPoint].time + points[currentPoint].wait)
                 {
-                    elapsed -= points[currentPoint].time;
+                    elapsed -= points[currentPoint].time + points[currentPoint].wait;
                     currentPoint++;
 
                     startPos = projectile.transform.position;
@@ -60,14 +64,6 @@ public class M_Movement : Mod
                 if (points.Length > currentPoint)
                 {
                     points[currentPoint].PlaceBulletAlongPath(projectile, elapsed, startPos);
-                    // if (currentPoint == 0)
-                    // {
-                    //     points[currentPoint].PlaceBulletAlongPath(projectile, elapsed, startPos);
-                    // }
-                    // else
-                    // {
-                    //     points[currentPoint].PlaceBulletAlongPath(projectile, elapsed, points[currentPoint-1].position);
-                    // }
                 }
             }
             else
@@ -103,7 +99,28 @@ public class M_Movement : Mod
             }
             else
             {
-                projectile.transform.position = PlayerMovement.current.transform.position;
+                // projectile.transform.position = PlayerMovement.current.transform.position;
+
+                Vector3 pos1 = Vector3.zero;
+                Vector3 pos2 = Vector3.zero;
+
+                if (trackX)
+                {
+                    pos1 += Vector3.right * projectile.transform.position.x;
+                    pos2 += Vector3.right * PlayerMovement.current.transform.position.x;
+                }
+                if (trackY)
+                {
+                    pos1 += Vector3.up * projectile.transform.position.y;
+                    pos2 += Vector3.up * PlayerMovement.current.transform.position.y;
+                }
+
+                Vector3 direction = pos2 - pos1;
+                float distance = direction.magnitude;
+
+                float trackSpeed = Mathf.Pow(Mathf.Clamp01(distance/maxPSpeedDistance), 2);
+
+                projectile.transform.position += direction * trackSpeed * pinpointSpeed * Time.fixedDeltaTime;
             }
         }
         
@@ -127,7 +144,8 @@ public class M_Movement : Mod
 public class Point
 {
     public Vector3 position; // the position of the target
-    public float time; // the time in seconds that it takes to traverce this path
+    public float time; // the time in seconds that the bullet takes to traverce this path
+    public float wait; // the time after reaching the destination that the bullet will wait for
     public bool orbit; // determaines if the path will be a line from the current position to the target, or if the path will circle around the target
 
     [ShowIf("orbit")]
