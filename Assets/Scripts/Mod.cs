@@ -14,5 +14,7 @@ public abstract class Mod
 	public abstract void Run();
 	public virtual void End() {return;}
 
+	public virtual void OnTransformParentChanged() {return;}
+
 	public virtual void DrawGizmos() {return;}
 }

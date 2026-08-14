@@ -3,29 +3,40 @@ using UnityEngine;
 using NaughtyAttributes;
 using Unity.VisualScripting;
 using Unity.Mathematics;
+using System.IO;
+using System.Runtime.CompilerServices;
+
+public enum PathFinishSetting
+{
+    destroy,
+    moveByVelocity,
+    repeat
+}
 
 [Serializable]
 public class M_Movement : Mod
 {
     [SerializeField] bool followPath;
 
-    [AllowNesting] [HideIf("followPath")] [SerializeField] float speed;
-    [AllowNesting] [HideIf("followPath")] [SerializeField] float acceleration;
+    bool _willMoveByVelocity => !followPath || onFinish == PathFinishSetting.moveByVelocity;
+    [AllowNesting] [ShowIf("_willMoveByVelocity")] [SerializeField] float speed;
+    [AllowNesting] [ShowIf("_willMoveByVelocity")] [SerializeField] float acceleration;
 
-    [AllowNesting] [HideIf("followPath")] [SerializeField] bool tracking;
+    [AllowNesting] [ShowIf("_willMoveByVelocity")] [SerializeField] bool tracking;
 
-    bool _tracking => tracking && !followPath;
+    bool _tracking => tracking && _willMoveByVelocity;
     [AllowNesting] [ShowIf("_tracking")] [SerializeField] float rotationSpeed;
     [AllowNesting] [ShowIf("_tracking")] [SerializeField] bool pinpointLocation;
 
-    bool _pinpointing => pinpointLocation && !followPath;
+    bool _pinpointing => pinpointLocation && _willMoveByVelocity;
     [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] bool trackX = true;
     [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] bool trackY = true;
     [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] float pinpointSpeed;
     [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] float maxPSpeedDistance;
 
     [AllowNesting] [ShowIf("followPath")] [SerializeField] Vector3 start;
-    [AllowNesting] [ShowIf("followPath")] [SerializeField] bool destroyOnFinish = true;
+    [AllowNesting] [ShowIf("followPath")] [SerializeField] bool moveLocally = true;
+    [AllowNesting] [ShowIf("followPath")] [SerializeField] PathFinishSetting onFinish;
 
     [Header("Points")] // show if doesnt work in this case so im just making it a seperate catagory
     [SerializeField] Point[] points;
@@ -36,6 +47,7 @@ public class M_Movement : Mod
     float elapsed = 0;
     int currentPoint = 0;
     Vector3 startPos;
+    Vector3 localOffset;
     
 
     public override void Begin(Projectile projectile)
@@ -47,6 +59,25 @@ public class M_Movement : Mod
 
     public override void Run() 
     {
+        if (projectile.transform.parent != null && moveLocally)
+        {
+            // Debug.Log(projectile.transform.parent.transform.position + " local origin");
+            // Debug.Log(localOffset + " previous local origin");
+            Vector3 localChange = projectile.transform.parent.transform.position - localOffset;
+            localOffset += localChange;
+
+            // Debug.Log(localOffset + " updated local origin");
+            // Debug.Log(localChange + " change in global position");
+
+            start += localChange;
+            startPos += localChange;
+
+            foreach (Point point in points)
+            {
+                point.position += localChange;
+            }
+        }
+
         if (followPath)
         {
             elapsed += Time.fixedDeltaTime;
@@ -68,9 +99,23 @@ public class M_Movement : Mod
             }
             else
             {
-                if (destroyOnFinish)
+                if (onFinish == PathFinishSetting.destroy)
                 {
                     projectile.Despawn();
+                }
+                else if (onFinish == PathFinishSetting.moveByVelocity)
+                {
+                    followPath = false;
+                }
+                else if (onFinish == PathFinishSetting.repeat)
+                {
+                    elapsed = 0;
+                    currentPoint = 0;
+
+                    if (points.Length > currentPoint)
+                    {
+                        Run();
+                    }
                 }
             }
         }
@@ -126,8 +171,26 @@ public class M_Movement : Mod
         
     }
 
+    public override void OnTransformParentChanged()
+    {
+        // start += localOffset;
+        // startPos += localOffset;
+
+        // foreach (Point point in points)
+        // {
+        //     point.position += localOffset;
+        // }
+        if (projectile.transform.parent != null)
+        {
+            localOffset = projectile.transform.parent.transform.position;
+        }
+        
+    }
+
     public override void DrawGizmos()
     {
+        if (!drawGizmos) return;
+
         if (followPath)
         {
             Vector3 lastPosition = start;
@@ -140,24 +203,53 @@ public class M_Movement : Mod
     }
 }
 
+public enum Easing
+{
+    None,
+    SlowIn,
+    SlowOut,
+    SlowInAndOut
+}
+
 [Serializable]
 public class Point
 {
     public Vector3 position; // the position of the target
     public float time; // the time in seconds that the bullet takes to traverce this path
     public float wait; // the time after reaching the destination that the bullet will wait for
-    public bool orbit; // determaines if the path will be a line from the current position to the target, or if the path will circle around the target
+    
+    public Easing easing = Easing.None;
 
-    [ShowIf("orbit")]
-    public float travel;
+    [Header("Orbit")]
+    public bool orbit; // determaines if the path will be a line from the current position to the target, or if the path will circle around the target
+    [AllowNesting] [ShowIf("orbit")] [SerializeField] float travel; // distance that the bullet will travel along the circle (1 = radius)
 
     public void PlaceBulletAlongPath(Projectile projectile, float t, Vector3 previous)
     {
-        float traveled = t/time;
+        Vector3 newPosition;
+        float traveled = Mathf.Clamp(t, 0, time)/time;
+
+        switch (easing)
+        {
+            case Easing.SlowIn:
+                traveled = Mathf.Pow(traveled, 2);
+                break;
+
+            case Easing.SlowOut:
+                traveled = 1 - Mathf.Pow(1-traveled, 2);
+                break;
+            
+            case Easing.SlowInAndOut:
+                traveled = Mathf.Pow(3*traveled, 2) - Mathf.Pow(2*traveled, 3);
+                break;
+            
+            default:
+                break;
+        }
 
         if (!orbit)
         {
-            projectile.transform.position = previous + (position-previous) * traveled;
+            newPosition = previous + (position-previous) * traveled;
         }
         else
         {
@@ -167,14 +259,15 @@ public class Point
 
             if (radius == 0) return;
             
-            float gotoAngle = angle + travel/radius;
+            float gotoAngle = angle + travel*Mathf.PI;
 
             float difference = gotoAngle - angle;
             float currentAngle = angle + difference * traveled;
 
-            projectile.transform.position = new Vector3(Mathf.Cos(currentAngle)*radius, Mathf.Sin(currentAngle)*radius, 0) + position;
+            newPosition = new Vector3(Mathf.Cos(currentAngle)*radius, Mathf.Sin(currentAngle)*radius, 0) + position;
         }
         
+        projectile.transform.position = newPosition;
     }
 
     public Vector3 DrawGizmos(Vector3 previous)
@@ -199,7 +292,7 @@ public class Point
 
                 if (radius == 0) return position;
 
-                float gotoAngle = angle + travel/radius;
+                float gotoAngle = angle + travel*Mathf.PI;
 
                 Vector3 pPosition = new Vector3(Mathf.Cos(angle)*radius, Mathf.Sin(angle)*radius, 0);
                 pPosition += position;

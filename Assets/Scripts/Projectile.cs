@@ -1,6 +1,8 @@
 using Unity.VisualScripting;
 using UnityEditor;
+using UnityEditor.PackageManager;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class Projectile : MonoBehaviour
 {
@@ -72,8 +74,22 @@ public class Projectile : MonoBehaviour
             mod.End();
         }
 
+        while (transform.childCount > 0)
+        {
+            Debug.Log("releasing " + transform.GetChild(0));
+            transform.GetChild(0).SetParent(transform.parent);
+        }
+
         // later on we should create a manager to manage object pooling, because we really shouldnt be instantiateing and destroying so many bullets. Its not great on performance...
         Destroy(gameObject);
+    }
+
+    public void OnTransformParentChanged()
+    {
+        foreach (Mod mod in mods)
+        {
+            mod.OnTransformParentChanged();
+        }
     }
 
     void OnDrawGizmos()
