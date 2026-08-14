@@ -3,6 +3,8 @@ using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
+    public static PlayerMovement current; // making the player a singleton for easy reference. if anyone wants to change this thats ok just talk with foonji on discord first
+
     [Header("Input")]
 
     [SerializeField] private InputActionReference movementAction;
@@ -58,6 +60,8 @@ public class PlayerMovement : MonoBehaviour
         //testicles
         playerSprite = GetComponent<SpriteRenderer>();
         normalColor = playerSprite.color;
+
+        current = this;
     }
 
     private void OnEnable()

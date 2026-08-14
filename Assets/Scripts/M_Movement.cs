@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 using NaughtyAttributes;
+using Unity.VisualScripting;
+using Unity.Mathematics;
 
 [Serializable]
 public class M_Movement : Mod
@@ -9,6 +11,14 @@ public class M_Movement : Mod
 
     [AllowNesting] [HideIf("followPath")] [SerializeField] float speed;
     [AllowNesting] [HideIf("followPath")] [SerializeField] float acceleration;
+
+    [AllowNesting] [HideIf("followPath")] [SerializeField] bool tracking;
+    [AllowNesting] [ShowIf("tracking")] [SerializeField] float rotationSpeed;
+    [AllowNesting] [ShowIf("tracking")] [SerializeField] bool pinpointLocation;
+    [AllowNesting] [ShowIf(EConditionOperator.And, "followPath", "pinpointLocation")] [SerializeField] bool trackX = true;
+    [AllowNesting] [ShowIf(EConditionOperator.And, "followPath", "pinpointLocation")] [SerializeField] bool trackY = true;
+    [AllowNesting] [ShowIf(EConditionOperator.And, "followPath", "pinpointLocation")] [SerializeField] bool pinpointSpeed;
+    [AllowNesting] [ShowIf(EConditionOperator.And, "followPath", "pinpointLocation")] [SerializeField] bool maxPSpeedDistance;
 
     [AllowNesting] [ShowIf("followPath")] [SerializeField] Vector3 start;
     [AllowNesting] [ShowIf("followPath")] [SerializeField] bool destroyOnFinish = true;
@@ -21,12 +31,14 @@ public class M_Movement : Mod
 
     float elapsed = 0;
     int currentPoint = 0;
-    // Vector3 last
+    Vector3 startPos;
     
 
     public override void Begin(Projectile projectile)
     {
         base.Begin(projectile);
+
+        startPos = start;
     }
 
     public override void Run() 
@@ -41,18 +53,21 @@ public class M_Movement : Mod
                 {
                     elapsed -= points[currentPoint].time;
                     currentPoint++;
+
+                    startPos = projectile.transform.position;
                 }
 
                 if (points.Length > currentPoint)
                 {
-                    if (currentPoint == 0)
-                    {
-                        points[currentPoint].PlaceBulletAlongPath(projectile, elapsed, start);
-                    }
-                    else
-                    {
-                        points[currentPoint].PlaceBulletAlongPath(projectile, elapsed, points[currentPoint-1].position);
-                    }
+                    points[currentPoint].PlaceBulletAlongPath(projectile, elapsed, startPos);
+                    // if (currentPoint == 0)
+                    // {
+                    //     points[currentPoint].PlaceBulletAlongPath(projectile, elapsed, startPos);
+                    // }
+                    // else
+                    // {
+                    //     points[currentPoint].PlaceBulletAlongPath(projectile, elapsed, points[currentPoint-1].position);
+                    // }
                 }
             }
             else
@@ -65,20 +80,45 @@ public class M_Movement : Mod
         }
         else
         {
-            projectile.transform.Translate(Vector3.right * speed * Time.fixedDeltaTime);
-            speed += acceleration * Time.fixedDeltaTime;
+            if (!(tracking && pinpointLocation))
+            {
+                projectile.transform.Translate(Vector3.right * speed * Time.fixedDeltaTime);
+                speed += acceleration * Time.fixedDeltaTime;
+
+                if (tracking)
+                {
+                    Vector3 direction = PlayerMovement.current.transform.position - projectile.transform.position;
+
+                    if (direction.normalized + projectile.transform.right == Vector3.zero)
+                    {
+                        direction.x += 1;
+                    }
+
+                    Vector3 newRight = Vector3.RotateTowards(projectile.transform.right, direction, rotationSpeed * Time.fixedDeltaTime, 0);
+
+                    newRight.z = 0;
+
+                    projectile.transform.right = newRight;
+                }
+            }
+            else
+            {
+                projectile.transform.position = PlayerMovement.current.transform.position;
+            }
         }
         
     }
 
     public override void DrawGizmos()
     {
-        Vector3 previous = start;
-
-        foreach (Point point in points)
+        if (followPath)
         {
-            point.DrawGizmos(previous);
-            previous = point.position;
+            Vector3 lastPosition = start;
+
+            foreach (Point point in points)
+            {
+                lastPosition = point.DrawGizmos(lastPosition);
+            }
         }
     }
 }
@@ -119,7 +159,7 @@ public class Point
         
     }
 
-    public void DrawGizmos(Vector3 previous)
+    public Vector3 DrawGizmos(Vector3 previous)
     {
         Gizmos.color = Color.lightGray;
 
@@ -130,6 +170,8 @@ public class Point
             if (!orbit)
             {
                 Gizmos.DrawLine(position, previous);
+
+                return position;
             }
             else
             {
@@ -137,7 +179,7 @@ public class Point
                 float angle = Mathf.Atan2(vectorAngle.y, vectorAngle.x);
                 float radius = vectorAngle.magnitude;
 
-                if (radius == 0) return;
+                if (radius == 0) return position;
 
                 float gotoAngle = angle + travel/radius;
 
@@ -169,8 +211,13 @@ public class Point
                     }
                 }
                 
-                Gizmos.DrawLine(pPosition, new Vector3(Mathf.Cos(gotoAngle)*radius, Mathf.Sin(gotoAngle)*radius, 0) + position);
+                Vector3 fPosition = new Vector3(Mathf.Cos(gotoAngle)*radius, Mathf.Sin(gotoAngle)*radius, 0) + position;
+                Gizmos.DrawLine(pPosition, fPosition);
+
+                return fPosition;
             }
         }
+
+        return position;
     }
 }

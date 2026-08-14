@@ -1,13 +1,15 @@
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
     [SerializeField] float lifetime = 0; // the time in seconds that the bullets last. If it is <= 0 than the bullet will not expire
+    float age = 0; // the time that the bullet has been alive for
 
     [SerializeReference] [SubclassSelector] Mod[] mods; // any mods which will be applyed to the bullet
 
-    float age = 0; // the time that the bullet has been alive for
+    [SerializeField] bool active = true;
 
     public void Start()
     {
@@ -16,9 +18,11 @@ public class Projectile : MonoBehaviour
 			// Debug.Log("running the begin func");
 			mod.Begin(this);
 		}
+
+        GetComponent<SpriteRenderer>().enabled = active;
     }
-    
-    public void Initialize(float lifetime = 0, Mod[] mods = null)
+
+    public void Initialize(float lifetime = 0, Mod[] mods = null, bool active = true)
     {
         this.lifetime = lifetime;
 
@@ -29,6 +33,9 @@ public class Projectile : MonoBehaviour
 			// Debug.Log("running the begin func");
 			mod.Begin(this);
 		}
+
+        this.active = active;
+        GetComponent<SpriteRenderer>().enabled = active;
 	}
 
     void FixedUpdate()
@@ -49,7 +56,7 @@ public class Projectile : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.tag == "Player")
+        if (active && collision.tag == "Player")
         {
             collision.GetComponent<PlayerMovement>().Damaged(gameObject);
 
