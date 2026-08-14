@@ -107,6 +107,8 @@ public class Point
             float angle = Mathf.Atan2(vectorAngle.y, vectorAngle.x);
             float radius = vectorAngle.magnitude;
 
+            if (radius == 0) return;
+            
             float gotoAngle = angle + travel/radius;
 
             float difference = gotoAngle - angle;
@@ -134,6 +136,8 @@ public class Point
                 Vector3 vectorAngle = previous - position;
                 float angle = Mathf.Atan2(vectorAngle.y, vectorAngle.x);
                 float radius = vectorAngle.magnitude;
+
+                if (radius == 0) return;
 
                 float gotoAngle = angle + travel/radius;
 
