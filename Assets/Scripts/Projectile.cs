@@ -8,6 +8,9 @@ public class Projectile : MonoBehaviour
     [SerializeField] float lifetime = 0; // the time in seconds that the bullets last. If it is <= 0 than the bullet will not expire
     [SerializeField] bool despawnOffscreen = true;
     [SerializeField] bool visible = true;
+    [SerializeField] bool parryable = false;
+
+    public bool IsParryable => parryable;
 
     [SerializeField] Mod[] mods; // any mods which will be applyed to the bullet
 
@@ -79,16 +82,16 @@ public class Projectile : MonoBehaviour
         }
     }
 
-    void OnTriggerEnter2D(Collider2D collision)
-    {
-        // Debug.Log("hitSomthing");
-        if (collision.tag == "Player" && visible)
-        {
-            collision.GetComponent<PlayerMovement>().Damaged(gameObject);
+    // void OnTriggerEnter2D(Collider2D collision)
+    // {
+    //     // Debug.Log("hitSomthing");
+    //     if (collision.tag == "Player" && visible)
+    //     {
+    //         collision.GetComponent<PlayerMovement>().Damaged(gameObject);
 
-            Despawn();
-        }
-    }
+    //         Despawn();
+    //     }
+    // }
 
     public void Despawn()
     {
