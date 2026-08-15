@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using NaughtyAttributes;
 using UnityEditor;
 using UnityEngine;
@@ -10,10 +11,7 @@ public class Attack : MonoBehaviour
 {
 	// Prefab
 	[SerializeField] GameObject projectilePrefab; // the prefab of the bullet that will be spawned
-
-	// projectile attributes
-	[SerializeField,Tooltip("The speed of the projectile")] float speed = 1; // speed
-	[SerializeField,Tooltip("The acceleration of the projectile")] float acceleration = 1; // acceleration
+	[SerializeReference,SubclassSelector] private Mod[] projectileMods; // the mods that will be applied to the projectile when it is spawned
 	[SerializeField,Tooltip("The lifetime of the projectile")] float lifetime = 1; // lifetime
 
 	[SerializeField, Tooltip("Whether the attack will use sprays. Sprays can only fire projectiles one at a time")] bool useSpray = true; // determines if the attack will use the spray
@@ -63,7 +61,6 @@ public class Attack : MonoBehaviour
 		[ShowIf("useSpread"), Tooltip("Bullets further away from the line's center will angle away from the lines center if true.")]
 		public bool useDeterministicSpread = true;
 	}
-
 	float age; // the time that the attack has been occuring for
     public void ExecuteAttack()
 	{
@@ -94,7 +91,12 @@ public class Attack : MonoBehaviour
 			}
 			spawnPosition += transform.right * randomDistanceOffset;
 			GameObject projectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.Euler(new Vector3(0, 0, transform.eulerAngles.z + randomAngleOffset)));
-			projectile.GetComponent<Projectile>().Initialize(speed, acceleration, lifetime);
+			Mod[] deepCopiedMods = new Mod[projectileMods.Length];
+			for (int j = 0; j < projectileMods.Length; j++)
+			{
+				deepCopiedMods[j] = (Mod)projectileMods[j].Clone();
+			}
+			projectile.GetComponent<Projectile>().Initialize(lifetime, deepCopiedMods);
 			yield return new WaitForSeconds(delay);
 		}
 
@@ -128,7 +130,12 @@ public class Attack : MonoBehaviour
 							break;
 					}
 					GameObject projectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.Euler(new Vector3(0, 0, transform.eulerAngles.z + (bursts[i].spawnsEvenly ? currentAngleOffset : randomAngleOffset))));
-					projectile.GetComponent<Projectile>().Initialize(speed, acceleration, lifetime);
+					Mod[] deepCopiedMods = new Mod[projectileMods.Length];
+					for (int l = 0; l < projectileMods.Length; l++)
+					{
+						deepCopiedMods[l] = (Mod)projectileMods[l].Clone();
+					}
+					projectile.GetComponent<Projectile>().Initialize(lifetime, deepCopiedMods);
 					currentAngleOffset += bursts[i].spread / (bursts[i].projectileNum - 1);
 				}
 				yield return new WaitForSeconds(bursts[i].delay);
@@ -139,7 +146,11 @@ public class Attack : MonoBehaviour
 
     void OnDrawGizmos()
     {
-
+		float travelDistance = 0;
+		foreach(Mod mod in projectileMods)
+		{
+			travelDistance = Mathf.Max(travelDistance, mod.GetTravelDistance(lifetime));
+		}
 		Gizmos.color = Color.red;
 		Handles.color = Color.red;
 		switch(spawnShape)
@@ -157,9 +168,9 @@ public class Attack : MonoBehaviour
 		{
 			
 			// Draw a cone for the spread of the attack
-			Vector3 FirstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
-			Vector3 SecondEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
-			Vector3 Center = transform.position + new Vector3(Mathf.Cos(transform.eulerAngles.z * Mathf.Deg2Rad), Mathf.Sin(transform.eulerAngles.z * Mathf.Deg2Rad), 0) * speed * lifetime;
+			Vector3 FirstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
+			Vector3 SecondEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
+			Vector3 Center = transform.position + new Vector3(Mathf.Cos(transform.eulerAngles.z * Mathf.Deg2Rad), Mathf.Sin(transform.eulerAngles.z * Mathf.Deg2Rad), 0) * travelDistance;
 			switch(spawnShape)
 			{
 				case SpawnShape.Point:
@@ -168,7 +179,7 @@ public class Attack : MonoBehaviour
 						Gizmos.DrawLine(transform.position, FirstEnd);
 						Gizmos.DrawLine(transform.position, SecondEnd);
 						#if UNITY_EDITOR
-							Handles.DrawWireArc(transform.position, Vector3.forward, FirstEnd - transform.position, -spread, speed * lifetime);
+							Handles.DrawWireArc(transform.position, Vector3.forward, FirstEnd - transform.position, -spread, travelDistance);
 						#endif
 					}
 					else
@@ -180,8 +191,8 @@ public class Attack : MonoBehaviour
 				case SpawnShape.Line:
 					Vector3 lineStart = transform.position - transform.up * spawnLineLength / 2;
 					Vector3 lineEnd = transform.position + transform.up * spawnLineLength / 2;
-					Vector3 lineFirstEnd = lineEnd + new Vector3(Mathf.Cos((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad),0) * speed * lifetime;
-					Vector3 lineSecondEnd = lineStart + new Vector3(Mathf.Cos((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad),0) * speed * lifetime;
+					Vector3 lineFirstEnd = lineEnd + new Vector3(Mathf.Cos((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad),0) * travelDistance;
+					Vector3 lineSecondEnd = lineStart + new Vector3(Mathf.Cos((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad),0) * travelDistance;
 					Gizmos.DrawLine(lineStart, lineEnd);
 					if (useSpread)
 					{
@@ -189,7 +200,7 @@ public class Attack : MonoBehaviour
 						Gizmos.DrawLine(lineStart, lineSecondEnd);
 #if UNITY_EDITOR
 						Vector3 center = (lineEnd + lineStart) / 2;
-						float targetDistance = speed * lifetime;
+						float targetDistance = travelDistance;
 						float baseAngleRad = transform.eulerAngles.z * Mathf.Deg2Rad;
 						Vector3 bisectorDir = new Vector3(Mathf.Cos(baseAngleRad), Mathf.Sin(baseAngleRad), 0);
 						Vector3 bezierCenterTarget = center + bisectorDir * targetDistance;
@@ -209,7 +220,7 @@ public class Attack : MonoBehaviour
 					}
 					else
 					{
-						Vector3 lineOffset = transform.right * speed * lifetime;
+						Vector3 lineOffset = transform.right * travelDistance;
 						Gizmos.DrawLine(lineStart, lineStart+lineOffset);
 						Gizmos.DrawLine(lineEnd, lineEnd+ lineOffset);
 						Gizmos.DrawLine(lineStart + lineOffset, lineEnd + lineOffset);
@@ -233,7 +244,7 @@ public class Attack : MonoBehaviour
 					float currentAngleOffset = -burst.spread / 2;
 					for (int j = 0; j < burst.projectileNum; j++)
 					{
-						Vector3 burstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffset : 0)) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffset : 0)) * Mathf.Deg2Rad), 0) * speed * lifetime;
+						Vector3 burstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffset : 0)) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffset : 0)) * Mathf.Deg2Rad), 0) * travelDistance;
 						Gizmos.DrawLine(transform.position, burstEnd);
 						currentAngleOffset += burst.spread / (burst.projectileNum - 1);
 					}
@@ -244,7 +255,7 @@ public class Attack : MonoBehaviour
 					for (int j = 0; j < burst.projectileNum; j++)
 					{
 						Vector3 spawnPosition = transform.position + transform.up * currentSpawnOffset;
-						Vector3 burstEnd = spawnPosition + new Vector3(Mathf.Cos((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffsetLine : 0)) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffsetLine : 0)) * Mathf.Deg2Rad), 0) * speed * lifetime;
+						Vector3 burstEnd = spawnPosition + new Vector3(Mathf.Cos((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffsetLine : 0)) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffsetLine : 0)) * Mathf.Deg2Rad), 0) * travelDistance;
 						Gizmos.DrawLine(spawnPosition, burstEnd);
 						currentAngleOffsetLine += burst.spread / (burst.projectileNum - 1);
 						currentSpawnOffset += spawnLineLength / (burst.projectileNum - 1);
@@ -255,9 +266,9 @@ public class Attack : MonoBehaviour
 		}
 		else{
 			float burstspread = burst.spread;
-			Vector3 BurstFirstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
-			Vector3 BurstSecondEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
-			Vector3 BurstCenter = transform.position + new Vector3(Mathf.Cos(transform.eulerAngles.z * Mathf.Deg2Rad), Mathf.Sin(transform.eulerAngles.z * Mathf.Deg2Rad), 0) * speed * lifetime;
+			Vector3 BurstFirstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
+			Vector3 BurstSecondEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
+			Vector3 BurstCenter = transform.position + new Vector3(Mathf.Cos(transform.eulerAngles.z * Mathf.Deg2Rad), Mathf.Sin(transform.eulerAngles.z * Mathf.Deg2Rad), 0) * travelDistance;
 			switch (spawnShape)
 			{
 				case SpawnShape.Point:
@@ -266,7 +277,7 @@ public class Attack : MonoBehaviour
 						Gizmos.DrawLine(transform.position, BurstFirstEnd);
 						Gizmos.DrawLine(transform.position, BurstSecondEnd);
 #if UNITY_EDITOR
-						Handles.DrawWireArc(transform.position, Vector3.forward, BurstFirstEnd - transform.position, -burstspread, speed * lifetime);
+						Handles.DrawWireArc(transform.position, Vector3.forward, BurstFirstEnd - transform.position, -burstspread, travelDistance);
 #endif
 					}
 					else
@@ -278,8 +289,8 @@ public class Attack : MonoBehaviour
 				case SpawnShape.Line:
 					Vector3 lineStart = transform.position - transform.up * spawnLineLength / 2;
 					Vector3 lineEnd = transform.position + transform.up * spawnLineLength / 2;
-					Vector3 lineFirstEnd = lineEnd + new Vector3(Mathf.Cos((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
-					Vector3 lineSecondEnd = lineStart + new Vector3(Mathf.Cos((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), 0) * speed * lifetime;
+					Vector3 lineFirstEnd = lineEnd + new Vector3(Mathf.Cos((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
+					Vector3 lineSecondEnd = lineStart + new Vector3(Mathf.Cos((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
 					Gizmos.DrawLine(lineStart, lineEnd);
 					if (burst.useSpread)
 					{
@@ -287,7 +298,7 @@ public class Attack : MonoBehaviour
 						Gizmos.DrawLine(lineStart, lineSecondEnd);
 #if UNITY_EDITOR
 						Vector3 center = (lineEnd + lineStart) / 2;
-						float targetDistance = speed * lifetime;
+						float targetDistance = travelDistance;
 						float baseAngleRad = transform.eulerAngles.z * Mathf.Deg2Rad;
 						Vector3 bisectorDir = new Vector3(Mathf.Cos(baseAngleRad), Mathf.Sin(baseAngleRad), 0);
 						Vector3 bezierCenterTarget = center + bisectorDir * targetDistance;
@@ -307,7 +318,7 @@ public class Attack : MonoBehaviour
 					}
 					else
 					{
-						Vector3 lineOffset = transform.right * speed * lifetime;
+						Vector3 lineOffset = transform.right * travelDistance;
 						Gizmos.DrawLine(lineStart, lineStart + lineOffset);
 						Gizmos.DrawLine(lineEnd, lineEnd + lineOffset);
 						Gizmos.DrawLine(lineStart + lineOffset, lineEnd + lineOffset);

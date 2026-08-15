@@ -1,10 +1,11 @@
+using Unity.VisualScripting;
 using UnityEditor;
+using UnityEditor.PackageManager;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class Projectile : MonoBehaviour
 {
-    [SerializeField] float speed = 1; // speed determines the speed that the bullets travel
-    [SerializeField] float acceleration = 0; // the rate at which the speed increases
     [SerializeField] float lifetime = 0; // the time in seconds that the bullets last. If it is <= 0 than the bullet will not expire
     [SerializeField] bool despawnOffscreen = true;
     [SerializeField] bool visible = true;
@@ -13,46 +14,41 @@ public class Projectile : MonoBehaviour
     public bool IsParryable => parryable;
 
     [SerializeField] Mod[] mods; // any mods which will be applyed to the bullet
-
-    static float offscreenDespawnDistance = 30f; // determines the distance from the center of the screen that all bullets will despawn at
-
     float age = 0; // the time that the bullet has been alive for
+
+    [SerializeReference] [SubclassSelector] Mod[] mods; // any mods which will be applyed to the bullet
+
+    [SerializeField] bool active = true;
 
     public void Start()
     {
-        // Debug.Log("ran start");
-        // Debug.Log(mods[0]);
-        // mods
         foreach (Mod mod in mods)
-        {
-            // Debug.Log("running the begin func");
-            mod.Begin(this);
-        }
+		{
+			// Debug.Log("running the begin func");
+			mod.Begin(this);
+		}
 
-        GetComponent<SpriteRenderer>().enabled = visible;
+        GetComponent<SpriteRenderer>().enabled = active;
     }
 
-    public void Initialize(float speed, float acceleration, float lifetime = 0, bool visible = true)
+    public void Initialize(float lifetime = 0, Mod[] mods = null, bool active = true)
     {
-        this.speed = speed;
-        this.acceleration = acceleration;
         this.lifetime = lifetime;
 
-        this.visible = visible;
-        GetComponent<SpriteRenderer>().enabled = visible;
-    }
+        this.mods = mods;
+		// mods
+		foreach (Mod mod in mods)
+		{
+			// Debug.Log("running the begin func");
+			mod.Begin(this);
+		}
+
+        this.active = active;
+        GetComponent<SpriteRenderer>().enabled = active;
+	}
+
     void FixedUpdate()
     {
-        // movement
-        gameObject.transform.position += transform.right * speed * Time.fixedDeltaTime;
-        speed += acceleration;
-
-        // offscreen check
-        if (despawnOffscreen)
-        {
-            CheckIfOffscreen();
-        }
-
         // lifetime check
         age += Time.fixedDeltaTime;
         if (lifetime > 0 && age > lifetime)
@@ -63,7 +59,6 @@ public class Projectile : MonoBehaviour
         // mods
         foreach (Mod mod in mods)
         {
-            // Debug.Log("running mod run");
             mod.Run();
         }
     }
@@ -101,7 +96,29 @@ public class Projectile : MonoBehaviour
             mod.End();
         }
 
+        while (transform.childCount > 0)
+        {
+            Debug.Log("releasing " + transform.GetChild(0));
+            transform.GetChild(0).SetParent(transform.parent);
+        }
+
         // later on we should create a manager to manage object pooling, because we really shouldnt be instantiateing and destroying so many bullets. Its not great on performance...
         Destroy(gameObject);
+    }
+
+    public void OnTransformParentChanged()
+    {
+        foreach (Mod mod in mods)
+        {
+            mod.OnTransformParentChanged();
+        }
+    }
+
+    void OnDrawGizmos()
+    {
+        foreach (Mod mod in mods)
+        {
+            mod.DrawGizmos();
+        }
     }
 }
