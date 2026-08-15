@@ -56,6 +56,11 @@ public class M_Movement : Mod
 
         startPos = start;
     }
+	public override float GetTravelDistance(float lifeTime)
+	{
+		// 1/2at^2 + vt
+		return speed * lifeTime + 0.5f * acceleration * lifeTime * lifeTime;
+	}
 
     public override void Run() 
     {

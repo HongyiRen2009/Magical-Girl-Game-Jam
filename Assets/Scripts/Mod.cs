@@ -10,6 +10,7 @@ public abstract class Mod
 	{
 		return this.MemberwiseClone();
 	}
+	public virtual float GetTravelDistance(float lifeTime) { return 0; }
 	public virtual void Begin(Projectile projectile) {this.projectile = projectile;}
 	public abstract void Run();
 	public virtual void End() {return;}
