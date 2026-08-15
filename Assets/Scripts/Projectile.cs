@@ -7,6 +7,13 @@ using UnityEngine.UIElements;
 public class Projectile : MonoBehaviour
 {
     [SerializeField] float lifetime = 0; // the time in seconds that the bullets last. If it is <= 0 than the bullet will not expire
+    [SerializeField] bool despawnOffscreen = true;
+    [SerializeField] bool visible = true;
+    [SerializeField] bool parryable = false;
+
+    public bool IsParryable => parryable;
+
+    [SerializeField] Mod[] mods; // any mods which will be applyed to the bullet
     float age = 0; // the time that the bullet has been alive for
 
     [SerializeReference] [SubclassSelector] Mod[] mods; // any mods which will be applyed to the bullet
@@ -56,15 +63,30 @@ public class Projectile : MonoBehaviour
         }
     }
 
-    void OnTriggerEnter2D(Collider2D collision)
+    public void DisableOffscreenDespawn() {despawnOffscreen = false;}
+    void CheckIfOffscreen()
     {
-        if (active && collision.tag == "Player")
+        /* 
+            this is not the correct equation to determine distance from the center, but it works well enough and saves on processing power
+            it also assumes that the camera is at 0, 0, which shouldnt be an issue...?
+        */ 
+        // This doesn't work right now
+        if (Mathf.Abs(transform.position.x) + Mathf.Abs(transform.position.y) > offscreenDespawnDistance)
         {
-            collision.GetComponent<PlayerMovement>().Damaged(gameObject);
-
-            Despawn();
+           Despawn();
         }
     }
+
+    // void OnTriggerEnter2D(Collider2D collision)
+    // {
+    //     // Debug.Log("hitSomthing");
+    //     if (collision.tag == "Player" && visible)
+    //     {
+    //         collision.GetComponent<PlayerMovement>().Damaged(gameObject);
+
+    //         Despawn();
+    //     }
+    // }
 
     public void Despawn()
     {
