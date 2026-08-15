@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 4146937598357883156}
   m_Layer: 0
   m_Name: Projectile
-  m_TagString: Untagged
+  m_TagString: Bullet
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -47,9 +47,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Projectile
   lifetime: 0
-  despawnOffscreen: 1
-  visible: 1
   mods: []
+  active: 1
+  parryable: 0
+  references:
+    version: 2
+    RefIds: []
 --- !u!212 &9128446382265269307
 SpriteRenderer:
   serializedVersion: 2
