@@ -1,3 +1,4 @@
+using System.Collections;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEditor.PackageManager;
@@ -11,28 +12,30 @@ public class Projectile : MonoBehaviour
 
     [SerializeReference] [SubclassSelector] Mod[] mods; // any mods which will be applyed to the bullet
 
-    [SerializeField] bool active = true;
+    bool active = false;
 
     [SerializeField] private bool parryable = false;
+    private TelegraphMod telegraphMod;
 
     public bool IsParryable => parryable;
-
-    public void Start()
-    {
-        foreach (Mod mod in mods)
-		{
-			// Debug.Log("running the begin func");
-			mod.Begin(this);
-		}
-
-        GetComponent<SpriteRenderer>().enabled = active;
-    }
-
     public void Initialize(float lifetime = 0, Mod[] mods = null, bool active = true)
     {
         this.lifetime = lifetime;
-
         this.mods = mods;
+        StartCoroutine(StartMods(active));
+	}
+    private IEnumerator StartMods(bool active)
+	{
+        GetComponent<SpriteRenderer>().enabled = false;
+		foreach (Mod mod in mods)
+		{
+			if(mod is TelegraphMod){
+                mod.Begin(this);
+                telegraphMod = (TelegraphMod)mod;
+				yield return new WaitForSeconds(telegraphMod.telegraphDuration);
+                break;
+            }
+		}
 		// mods
 		foreach (Mod mod in mods)
 		{
@@ -40,12 +43,18 @@ public class Projectile : MonoBehaviour
 			mod.Begin(this);
 		}
 
-        this.active = active;
-        GetComponent<SpriteRenderer>().enabled = active;
+		this.active = active;
+		GetComponent<SpriteRenderer>().enabled = active;
+
 	}
 
     void FixedUpdate()
     {
+		if (telegraphMod!=null)
+		{
+            telegraphMod.Run();
+		}
+		if (!active) return;
         // lifetime check
         age += Time.fixedDeltaTime;
         if (lifetime > 0 && age > lifetime)
