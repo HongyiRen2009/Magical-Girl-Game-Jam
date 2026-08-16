@@ -35,8 +35,13 @@ public class M_Movement : Mod
     [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] float maxPSpeedDistance;
 
     [AllowNesting] [ShowIf("followPath")] [SerializeField] Vector3 start;
+    [AllowNesting] [ShowIf("followPath")] [SerializeField] bool moveStartToPos;
     [AllowNesting] [ShowIf("followPath")] [SerializeField] bool moveLocally = true;
     [AllowNesting] [ShowIf("followPath")] [SerializeField] PathFinishSetting onFinish;
+
+    bool _repeating => onFinish == PathFinishSetting.repeat;
+    [AllowNesting] [ShowIf("_repeating")] [SerializeField] float repeats; // if 0, repeats are infinite
+    [AllowNesting] [ShowIf("_repeating")] [SerializeField] bool maintainTransformOnRepeat;
 
     [Header("Points")] // show if doesnt work in this case so im just making it a seperate catagory
     [SerializeField] Point[] points;
@@ -48,14 +53,25 @@ public class M_Movement : Mod
     int currentPoint = 0;
     Vector3 startPos;
     Vector3 localOffset;
+    int iteration;
     
 
     public override void Begin(Projectile projectile)
     {
         base.Begin(projectile);
 
-        startPos = start;
+        if (!moveStartToPos)
+        {
+            startPos = start;
+        }
+        else
+        {
+            startPos = start;
+
+            TransformPath(projectile.transform.position - start);
+        }
     }
+
 	public override float GetTravelDistance(float lifeTime)
 	{
 		// 1/2at^2 + vt
@@ -66,21 +82,10 @@ public class M_Movement : Mod
     {
         if (projectile.transform.parent != null && moveLocally)
         {
-            // Debug.Log(projectile.transform.parent.transform.position + " local origin");
-            // Debug.Log(localOffset + " previous local origin");
             Vector3 localChange = projectile.transform.parent.transform.position - localOffset;
             localOffset += localChange;
 
-            // Debug.Log(localOffset + " updated local origin");
-            // Debug.Log(localChange + " change in global position");
-
-            start += localChange;
-            startPos += localChange;
-
-            foreach (Point point in points)
-            {
-                point.position += localChange;
-            }
+            TransformPath(localChange);
         }
 
         if (followPath)
@@ -114,8 +119,25 @@ public class M_Movement : Mod
                 }
                 else if (onFinish == PathFinishSetting.repeat)
                 {
+                    iteration++;
+
+                    if (repeats > 0 && iteration > repeats)
+                    {
+                        projectile.Despawn();
+                        return;
+                    }
+
                     elapsed = 0;
                     currentPoint = 0;
+
+                    startPos = start;
+                    
+                    if (maintainTransformOnRepeat)
+                    {
+                        Vector3 change = projectile.transform.position - start;
+
+                        TransformPath(change);
+                    }
 
                     if (points.Length > currentPoint)
                     {
@@ -190,6 +212,17 @@ public class M_Movement : Mod
             localOffset = projectile.transform.parent.transform.position;
         }
         
+    }
+    
+    void TransformPath(Vector3 change)
+    {
+        start += change;
+        startPos += change;
+
+        foreach (Point point in points)
+        {
+            point.position += change;
+        }
     }
 
     public override void DrawGizmos()

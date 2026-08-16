@@ -1,331 +1,495 @@
-using System.Collections;
-using System.Linq;
 using NaughtyAttributes;
-using UnityEditor;
 using UnityEngine;
+using System;
+using System.Collections;
+using UnityEditor;
+using Unity.Mathematics;
+using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
+using NUnit.Framework.Internal.Builders;
+
 public enum SpawnShape{
 	Point,
 	Line,
+}
+
+[Serializable]
+public class Burst
+{
+	[Tooltip("The number of projectiles in the burst")] public int projectileNum;
+	[Tooltip("The time in seconds in which the burst occurs")] public float delay;
+
+	[Header("Repetition")]
+	[Tooltip("The number of times the burst will repeat")] public int repeat = 0;
+	[Tooltip("The delay in seconds for the next burst repetition to occur after the previous burst repetition ends")] public float repeatDelay = 1;
+
+	[Header("Spread")]
+	[Tooltip("The degree offset by which the bullet can deviate from its starting angle")] public float spread;
+	[Tooltip("Bullets will spawn an equal disance away from each other if true")] public bool useEvenSpawn;
+	[Tooltip("Bullets further away from the line's center will angle away from the lines center if true.")] public bool useDeterministicSpread;
+
+	[Header("Gizmos")]
+	public bool showGizmos;
 }
 public class Attack : MonoBehaviour
 {
 	// Prefab
 	[SerializeField] GameObject projectilePrefab; // the prefab of the bullet that will be spawned
-	[SerializeReference,SubclassSelector] private Mod[] projectileMods; // the mods that will be applied to the projectile when it is spawned
-	[SerializeField,Tooltip("The lifetime of the projectile")] float lifetime = 1; // lifetime
 
-	[SerializeField, Tooltip("Whether the attack will use sprays. Sprays can only fire projectiles one at a time")] bool useSpray = true; // determines if the attack will use the spray
-	[SerializeField, Tooltip("Whether the attack will use bursts. Bursts can fire multiple projectiles at once")] bool useBursts = false; // determines if the attack will use the burst
-	// spawning variables
+	[Header("Bullet Settings")]
+	[SerializeField] [Tooltip("The lifetime of the projectile. Set to 0 for infinite lifetime")] float lifetime; // lifetime
+	[SerializeField] [Tooltip("Whether or not the projectile is active")] bool active = true; // lifetime
+	[SerializeReference] [SubclassSelector] private Mod[] mods; // the mods that will be applied to the projectile when it is spawned
+
 	[Header("Spray")]
-	[ShowIf("useSpray"), Tooltip("Duration of the spray attack")]
-	[SerializeField] float duration = 1; // the time in seconds in which bullets will be spawned
-	[ShowIf("useSpray"), Tooltip("The time in seconds between individual bullets being spawned")]
-	[SerializeField] float delay = 0.1f; // the time in seconds between individual bullets being spawned
-	[ShowIf("useSpray"), Tooltip("Whether the spray will use spread. Spread allows bullets to deviate from their starting angle")]
-	[SerializeField] private bool useSpread = true;
-	[ShowIf(EConditionOperator.And, "useSpray", "useSpread"), Tooltip("The degree offset by which the bullet can deviate from its starting angle")]
-	[SerializeField] float spread; // the degree offset (positive or negitive) by which the bullet can deviate from its starting angle
-	[ShowIf("spawnShape", SpawnShape.Line), Tooltip("Bullets further away from the line's center will angle away from the lines center if true.")]
-	[SerializeField] bool useDeterministicSpread = true;
-	[ShowIf("useSpray"), Tooltip("The position offset (forwards or backwards) at which the bullet can spawn")]
-	[SerializeField] float distanceVariability; // the position offset (positive or negitive) relitive to the angle which the bullet can spawn at
+	[Tooltip("The time in seconds that projectiles are spawned for")] [SerializeField] float duration;
+	[Tooltip("The time in seconds between individual projectiles being spawned")] [SerializeField] float firerate = 1f;
+	[Tooltip("The time in seconds that elapses before projectiles spawn")] [SerializeField] float delay;
+	[Tooltip("The degree offset by which the projectile can deviate from its starting angle")] [SerializeField] float spread;
+	[ShowIf("spawnShape", SpawnShape.Line), Tooltip("Projectiles further away from the line's center will angle away from the lines center if true.")] [SerializeField] bool useDeterministicSpread = true;
 
 	[Header("Bursts")]
-	[ShowIf("useBursts"), Tooltip("Bursts are individual groups of projectiles that spawn multiple bullets in an instant")]
-	[SerializeField] Burst[] bursts; // bullet bursts that spawn multiple bullets in an instant
-	[ShowIf("useBursts"), Tooltip("Which burst to show for the gizmo")]
-	[SerializeField] int burstDrawIndex = 0; // the index of the burst that will draw a gizmo in the editor. Anything outside the range of the array will not draw a gizmo.
+	[Tooltip("Spawn multiple bullets in an instant")] [SerializeField] Burst[] bursts;
 
-	[Header("Shape"), Tooltip("The shape of the spawn area")]
-	[SerializeField] SpawnShape spawnShape = SpawnShape.Point; // the shape of the spawn area
-	[ShowIf("spawnShape", SpawnShape.Line), Tooltip("How long the line that the bullets will spawn along is")]
-	[SerializeField] float spawnLineLength = 1; // the length of the line that the bullets will spawn along
-	[System.Serializable]
-	public class Burst
-	{
-		[Tooltip("The number of projectiles fired per burst fire")]
-		public int projectileNum = 1; // the number of projectiles in the burst
-		[Tooltip("The delay in seconds until the next burst")]
-		public float endDelay = 0.2f; // the delay in seconds that the next burst occurs after the previous burst ends
-		[Tooltip("Whether the spray will use spread. Spread allows bullets to deviate from their starting angle")]
-		public bool spawnsEvenly = false; // determines if the bullets spawned will spawn evenly across any spacing random-ness present in the attack
-		[Tooltip("The degree offset by which the bullet can deviate from its starting angle")]
-		public float spread = 0; // the total spread of the burst
-		[Tooltip("The total number of times the burst will repeat before going on to the next one in the list")]
-		public int repeatNums = 1; // the number of times the burst will repeat
-		[Tooltip("The delay in seconds for the next burst repetition to occur after the previous burst repetition ends")]
-		public float delay = 0.2f; // the delay in seconds for the next burst repetition to occur after the previous burst repetition ends
-		[ShowIf("spawnsEvenly", false),Tooltip("Whether to use spread. Spread allows bullets to deviate from their starting angle")]
-		public bool useSpread = true;
-		[ShowIf("useSpread"), Tooltip("Bullets further away from the line's center will angle away from the lines center if true.")]
-		public bool useDeterministicSpread = true;
-	}
-	float age; // the time that the attack has been occuring for
+	[Header("Shape")]
+	[Tooltip("The shape of the spawn area")] [SerializeField] SpawnShape spawnShape;
+	[ShowIf("spawnShape", SpawnShape.Line), Tooltip("How long the line that the bullets will spawn along is")] [SerializeField] float spawnLineLength = 1; // the length of the line that the bullets will spawn along
+
+	[Header("Gizmos")]
+	[SerializeField] bool showGizmos;
+	[ShowIf("showGizmos")] [SerializeField] bool showSpray;
+	float gizmosLength = 2f;
+
     public void ExecuteAttack()
 	{
 		StartCoroutine(ExecuteSpray());
-		StartCoroutine(ExecuteBursts());
-	}
-	private IEnumerator ExecuteSpray(){
-		if(!useSpray)
+
+		foreach (Burst burst in bursts)
 		{
-			yield break;
+			StartCoroutine(ExecuteBurst(burst));
 		}
-		for (int i = 0;i<duration/ delay; i++)
+	}
+
+	// preforms a complete spray of bullets
+	private IEnumerator ExecuteSpray()
+	{
+		// awaits inital delay to complete
+		yield return new WaitForSeconds(delay);
+
+
+		float elapsed = 0; // time sense spray has started
+		float lastSpawn = 0; // time sense last projectile was spawned
+
+		while (elapsed < duration)
 		{
-			float randomAngleOffset = useSpread ? Random.Range(-spread / 2, spread / 2) : 0;
-			float randomDistanceOffset = Random.Range(-distanceVariability / 2, distanceVariability / 2);
-			Vector3 spawnPosition = transform.position;
-			switch(spawnShape){
-				case SpawnShape.Point:
-					break;
-				case SpawnShape.Line:
-					float lineOffset = Random.Range(-spawnLineLength / 2, spawnLineLength / 2);
-					spawnPosition += transform.up * lineOffset;
-					if(useDeterministicSpread)
-					{
-						randomAngleOffset = lineOffset / spawnLineLength * spread;
-					}
-					break;
-			}
-			spawnPosition += transform.right * randomDistanceOffset;
-			GameObject projectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.Euler(new Vector3(0, 0, transform.eulerAngles.z + randomAngleOffset)));
-			Mod[] deepCopiedMods = new Mod[projectileMods.Length];
-			for (int j = 0; j < projectileMods.Length; j++)
+			// incriments the time
+			elapsed += Time.deltaTime;
+			lastSpawn += Time.deltaTime;
+
+			if (lastSpawn > firerate)
 			{
-				deepCopiedMods[j] = (Mod)projectileMods[j].Clone();
+				SpawnProjectile();
+
+				lastSpawn -= firerate;
 			}
-			projectile.GetComponent<Projectile>().Initialize(lifetime, deepCopiedMods);
-			yield return new WaitForSeconds(delay);
+
+			// waits for next frame
+			yield return null;
+		}
+	}
+
+	// spawns a projectile (baised on the initilized spray values)
+	void SpawnProjectile()
+	{
+		float randomAngleOffset = UnityEngine.Random.Range(-spread / 2, spread / 2);
+
+		Vector3 spawnPosition = transform.position;
+
+		if (spawnShape == SpawnShape.Line)
+		{
+			float lineOffset = UnityEngine.Random.Range(-spawnLineLength / 2, spawnLineLength / 2);
+			spawnPosition += transform.up * lineOffset; // could be a bug
+
+			if (useDeterministicSpread)
+			{
+				randomAngleOffset = lineOffset / spawnLineLength * spread;
+			}
 		}
 
-	}
-	private IEnumerator ExecuteBursts(){
-		if(!useBursts || bursts.Length == 0)
+		Quaternion spawnRotation = Quaternion.Euler(new Vector3(0, 0, transform.eulerAngles.z + randomAngleOffset));
+
+		GameObject projectile = Instantiate(projectilePrefab, spawnPosition, spawnRotation);
+
+		Mod[] deepCopiedMods = new Mod[mods.Length];
+		for (int i = 0; i < mods.Length; i++)
 		{
-			yield break;
+			deepCopiedMods[i] = (Mod) mods[i].Clone();
 		}
-		for (int i = 0; i < bursts.Length; i++)
+		projectile.GetComponent<Projectile>().Initialize(lifetime, deepCopiedMods, active);
+	}
+
+	private IEnumerator ExecuteBurst(Burst burst)
+	{
+		// awaits inital delay to complete
+		yield return new WaitForSeconds(burst.delay);
+
+		int iteration = 0;
+
+		while (burst.repeat >= iteration)
 		{
-			for (int k = 0; k < bursts[i].repeatNums; k++)
+			iteration++;
+
+			SpawnBurst(burst);
+			
+			yield return new WaitForSeconds(burst.repeatDelay);
+		}
+	}
+
+	void SpawnBurst(Burst burst)
+	{
+		for (int proj = 0; proj < burst.projectileNum; proj++)
+		{
+			float randomAngleOffset = UnityEngine.Random.Range(-burst.spread / 2, burst.spread / 2);
+
+			if (burst.useDeterministicSpread)
 			{
-				float currentAngleOffset = -bursts[i].spread / 2;
-				for (int j = 0; j < bursts[i].projectileNum; j++)
-				{
-					float randomAngleOffset = bursts[i].useSpread ? Random.Range(-bursts[i].spread / 2, bursts[i].spread / 2) : 0;
-					float randomDistanceOffset = Random.Range(-distanceVariability / 2, distanceVariability / 2);
-					Vector3 spawnPosition = transform.position;
-					switch (spawnShape)
-					{
-						case SpawnShape.Point:
-							break;
-						case SpawnShape.Line:
-							float lineOffset = bursts[i].spawnsEvenly ? -spawnLineLength / 2 + j * (spawnLineLength / (bursts[i].projectileNum - 1)) : Random.Range(-spawnLineLength / 2, spawnLineLength / 2);
-							spawnPosition += transform.up * lineOffset;
-							if (bursts[i].useDeterministicSpread)
-							{
-								randomAngleOffset = lineOffset / spawnLineLength * bursts[i].spread;
-							}
-							break;
-					}
-					GameObject projectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.Euler(new Vector3(0, 0, transform.eulerAngles.z + (bursts[i].spawnsEvenly ? currentAngleOffset : randomAngleOffset))));
-					Mod[] deepCopiedMods = new Mod[projectileMods.Length];
-					for (int l = 0; l < projectileMods.Length; l++)
-					{
-						deepCopiedMods[l] = (Mod)projectileMods[l].Clone();
-					}
-					projectile.GetComponent<Projectile>().Initialize(lifetime, deepCopiedMods);
-					currentAngleOffset += bursts[i].spread / (bursts[i].projectileNum - 1);
-				}
-				yield return new WaitForSeconds(bursts[i].delay);
+				float progression = proj/(burst.projectileNum-1f);
+				progression -= 0.5f;
+
+				randomAngleOffset = burst.spread * progression;
 			}
-			yield return new WaitForSeconds(bursts[i].endDelay);
+
+			Vector3 spawnPosition = transform.position;
+
+			if (spawnShape == SpawnShape.Line)
+			{
+				float lineOffset = UnityEngine.Random.Range(-spawnLineLength / 2, spawnLineLength / 2);
+
+				if (burst.useEvenSpawn)
+				{
+					float progression = proj/((float) burst.projectileNum-1);
+					progression -= 0.5f;
+
+					lineOffset = spawnLineLength * progression;
+				}
+
+				spawnPosition += transform.up * lineOffset;
+			}
+
+			Quaternion spawnRotation = Quaternion.Euler(new Vector3(0, 0, transform.eulerAngles.z + randomAngleOffset));
+
+			GameObject projectile = Instantiate(projectilePrefab, spawnPosition, spawnRotation);
+
+			Mod[] deepCopiedMods = new Mod[mods.Length];
+			for (int i = 0; i < mods.Length; i++)
+			{
+				deepCopiedMods[i] = (Mod) mods[i].Clone();
+			}
+			projectile.GetComponent<Projectile>().Initialize(lifetime, deepCopiedMods, active);
 		}
 	}
 
     void OnDrawGizmos()
     {
-		float travelDistance = 0;
-		foreach(Mod mod in projectileMods)
-		{
-			travelDistance = Mathf.Max(travelDistance, mod.GetTravelDistance(lifetime));
-		}
-		Gizmos.color = Color.red;
-		Handles.color = Color.red;
-		switch(spawnShape)
-		{
-			case SpawnShape.Point:
-				Gizmos.DrawWireSphere(transform.position, 0.2f);
-				break;
-			case SpawnShape.Line:
-				Vector3 lineStart = transform.position - transform.up * spawnLineLength / 2;
-				Vector3 lineEnd = transform.position + transform.up * spawnLineLength / 2;
-				Gizmos.DrawLine(lineStart, lineEnd);
-				break;
-		}
-		if (useSpray)
-		{
-			
-			// Draw a cone for the spread of the attack
-			Vector3 FirstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
-			Vector3 SecondEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
-			Vector3 Center = transform.position + new Vector3(Mathf.Cos(transform.eulerAngles.z * Mathf.Deg2Rad), Mathf.Sin(transform.eulerAngles.z * Mathf.Deg2Rad), 0) * travelDistance;
-			switch(spawnShape)
-			{
-				case SpawnShape.Point:
-					if (useSpread)
-					{
-						Gizmos.DrawLine(transform.position, FirstEnd);
-						Gizmos.DrawLine(transform.position, SecondEnd);
-						#if UNITY_EDITOR
-							Handles.DrawWireArc(transform.position, Vector3.forward, FirstEnd - transform.position, -spread, travelDistance);
-						#endif
-					}
-					else
-					{
-						Gizmos.DrawLine(transform.position, Center);
-
-					}
-					break;
-				case SpawnShape.Line:
-					Vector3 lineStart = transform.position - transform.up * spawnLineLength / 2;
-					Vector3 lineEnd = transform.position + transform.up * spawnLineLength / 2;
-					Vector3 lineFirstEnd = lineEnd + new Vector3(Mathf.Cos((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + spread / 2) * Mathf.Deg2Rad),0) * travelDistance;
-					Vector3 lineSecondEnd = lineStart + new Vector3(Mathf.Cos((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - spread / 2) * Mathf.Deg2Rad),0) * travelDistance;
-					Gizmos.DrawLine(lineStart, lineEnd);
-					if (useSpread)
-					{
-						Gizmos.DrawLine(lineEnd, lineFirstEnd);
-						Gizmos.DrawLine(lineStart, lineSecondEnd);
-#if UNITY_EDITOR
-						Vector3 center = (lineEnd + lineStart) / 2;
-						float targetDistance = travelDistance;
-						float baseAngleRad = transform.eulerAngles.z * Mathf.Deg2Rad;
-						Vector3 bisectorDir = new Vector3(Mathf.Cos(baseAngleRad), Mathf.Sin(baseAngleRad), 0);
-						Vector3 bezierCenterTarget = center + bisectorDir * targetDistance;
-						Vector3 chordMidpoint = (lineFirstEnd + lineSecondEnd) / 2f;
-						Vector3 controlPoint = (4f * bezierCenterTarget - chordMidpoint) / 3f;
-						Handles.DrawBezier(
-							lineSecondEnd,
-							lineFirstEnd,
-							controlPoint,
-							controlPoint,
-							Handles.color,
-							null,
-							2f
-						);
-#endif
-
-					}
-					else
-					{
-						Vector3 lineOffset = transform.right * travelDistance;
-						Gizmos.DrawLine(lineStart, lineStart+lineOffset);
-						Gizmos.DrawLine(lineEnd, lineEnd+ lineOffset);
-						Gizmos.DrawLine(lineStart + lineOffset, lineEnd + lineOffset);
-					}
-					break;
-			}
-
-
-
-		}
-		// Draw a cone for the spread of the burst or draw lines for each projectile in the burst if spreads evenly
-		if (burstDrawIndex < 0 || burstDrawIndex >= bursts.Length || !useBursts)
+		if (!showGizmos)
 		{
 			return;
 		}
-		Burst burst = bursts[burstDrawIndex];
-		if (burst.spawnsEvenly)
-		{
-			switch (spawnShape) {
-				case SpawnShape.Point:
-					float currentAngleOffset = -burst.spread / 2;
-					for (int j = 0; j < burst.projectileNum; j++)
-					{
-						Vector3 burstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffset : 0)) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffset : 0)) * Mathf.Deg2Rad), 0) * travelDistance;
-						Gizmos.DrawLine(transform.position, burstEnd);
-						currentAngleOffset += burst.spread / (burst.projectileNum - 1);
-					}
-					break;
-				case SpawnShape.Line:
-					float currentAngleOffsetLine = -burst.spread / 2;
-					float currentSpawnOffset = -spawnLineLength / 2;
-					for (int j = 0; j < burst.projectileNum; j++)
-					{
-						Vector3 spawnPosition = transform.position + transform.up * currentSpawnOffset;
-						Vector3 burstEnd = spawnPosition + new Vector3(Mathf.Cos((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffsetLine : 0)) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + (burst.spawnsEvenly ? currentAngleOffsetLine : 0)) * Mathf.Deg2Rad), 0) * travelDistance;
-						Gizmos.DrawLine(spawnPosition, burstEnd);
-						currentAngleOffsetLine += burst.spread / (burst.projectileNum - 1);
-						currentSpawnOffset += spawnLineLength / (burst.projectileNum - 1);
-					} 
-					break;
-			}
 
+		Gizmos.color = Color.red;
+		Handles.color = Color.red;
+
+		// drawing the attack shape
+		switch(spawnShape)
+		{
+			case SpawnShape.Point:
+
+				Gizmos.DrawWireSphere(transform.position, 0.2f);
+				
+				break;
+
+			case SpawnShape.Line:
+
+				Vector3 lineStart = transform.position - transform.up * spawnLineLength / 2;
+				Vector3 lineEnd = transform.position + transform.up * spawnLineLength / 2;
+				Gizmos.DrawLine(lineStart, lineEnd);
+
+				break;
 		}
-		else{
-			float burstspread = burst.spread;
-			Vector3 BurstFirstEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
-			Vector3 BurstSecondEnd = transform.position + new Vector3(Mathf.Cos((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
-			Vector3 BurstCenter = transform.position + new Vector3(Mathf.Cos(transform.eulerAngles.z * Mathf.Deg2Rad), Mathf.Sin(transform.eulerAngles.z * Mathf.Deg2Rad), 0) * travelDistance;
+
+		foreach (Mod mod in mods)
+		{
+			mod.DrawGizmos();
+		}
+
+		// drawing spray
+		if (showSpray)
+		{
+			DrawSpray();
+		}
+		// Draw a cone for the spread of the burst or draw lines for each projectile in the burst if spreads evenly
+
+		foreach (Burst burst in bursts)
+		{
+			if (burst.showGizmos)
+			{
+				DrawBurst(burst);
+			}
+		}
+	}
+
+	void DrawSpray()
+	{
+		Gizmos.color = Color.red;
+		Vector3 vRot = transform.eulerAngles * Mathf.Deg2Rad; // stands for vector rotation
+		
+		// if there is NO spread
+		if (spread == 0)
+		{
 			switch (spawnShape)
 			{
+				// point, no spread
 				case SpawnShape.Point:
-					if (burst.useSpread)
-					{
-						Gizmos.DrawLine(transform.position, BurstFirstEnd);
-						Gizmos.DrawLine(transform.position, BurstSecondEnd);
-#if UNITY_EDITOR
-						Handles.DrawWireArc(transform.position, Vector3.forward, BurstFirstEnd - transform.position, -burstspread, travelDistance);
-#endif
-					}
-					else
-					{
-						Gizmos.DrawLine(transform.position, BurstCenter);
 
-					}
-					break;
+					Vector3 Center = transform.position + new Vector3(Mathf.Cos(vRot.z), Mathf.Sin(vRot.z), 0) * gizmosLength;
+					Gizmos.DrawLine(transform.position, Center);
+
+					return;
+				
+				// line, no spread
 				case SpawnShape.Line:
-					Vector3 lineStart = transform.position - transform.up * spawnLineLength / 2;
-					Vector3 lineEnd = transform.position + transform.up * spawnLineLength / 2;
-					Vector3 lineFirstEnd = lineEnd + new Vector3(Mathf.Cos((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z + burstspread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
-					Vector3 lineSecondEnd = lineStart + new Vector3(Mathf.Cos((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), Mathf.Sin((transform.eulerAngles.z - burstspread / 2) * Mathf.Deg2Rad), 0) * travelDistance;
-					Gizmos.DrawLine(lineStart, lineEnd);
-					if (burst.useSpread)
-					{
-						Gizmos.DrawLine(lineEnd, lineFirstEnd);
-						Gizmos.DrawLine(lineStart, lineSecondEnd);
-#if UNITY_EDITOR
-						Vector3 center = (lineEnd + lineStart) / 2;
-						float targetDistance = travelDistance;
-						float baseAngleRad = transform.eulerAngles.z * Mathf.Deg2Rad;
-						Vector3 bisectorDir = new Vector3(Mathf.Cos(baseAngleRad), Mathf.Sin(baseAngleRad), 0);
-						Vector3 bezierCenterTarget = center + bisectorDir * targetDistance;
-						Vector3 chordMidpoint = (lineFirstEnd + lineSecondEnd) / 2f;
-						Vector3 controlPoint = (4f * bezierCenterTarget - chordMidpoint) / 3f;
-						Handles.DrawBezier(
-							lineSecondEnd,
-							lineFirstEnd,
-							controlPoint,
-							controlPoint,
-							Handles.color,
-							null,
-							2f
-						);
-#endif
 
+					float hLen = spawnLineLength / 2; // stands for half line length
+
+					Vector3 lineStart = transform.position - transform.up * hLen;
+					Vector3 lineEnd = transform.position + transform.up * hLen;
+
+					Vector3 lineOffset = transform.right * gizmosLength;
+
+					Gizmos.DrawLine(lineStart, lineStart + lineOffset);
+					Gizmos.DrawLine(lineEnd, lineEnd + lineOffset);
+					Gizmos.DrawLine(lineStart + lineOffset, lineEnd + lineOffset);
+
+					return;
+			}
+		}
+
+		// if there is spread
+		else
+		{
+			float hSpr = spread/2 * Mathf.Deg2Rad; // stands for half spread
+
+			switch(spawnShape)
+			{
+				// point, yes spread
+				case SpawnShape.Point:
+
+					Vector3 FirstEnd = new Vector3(Mathf.Cos(vRot.z + hSpr), Mathf.Sin(vRot.z + hSpr), 0) * gizmosLength;
+					Vector3 SecondEnd = new Vector3(Mathf.Cos(vRot.z - hSpr), Mathf.Sin(vRot.z - hSpr), 0) * gizmosLength;
+
+					Gizmos.DrawLine(transform.position, transform.position + FirstEnd);
+					Gizmos.DrawLine(transform.position, transform.position + SecondEnd);
+
+					#if UNITY_EDITOR
+						Handles.DrawWireArc(transform.position, Vector3.forward, FirstEnd, -spread, gizmosLength);
+					#endif
+					
+					return;
+
+				// line, yes spread
+				case SpawnShape.Line:
+
+					float hLen = spawnLineLength / 2; // stands for half line length
+
+					Vector3 lineStart = transform.position - transform.up * hLen;
+					Vector3 lineEnd = transform.position + transform.up * hLen;
+
+					Vector3 lineStartExtention = lineStart + new Vector3(Mathf.Cos(vRot.z - hSpr), Mathf.Sin(vRot.z - hSpr), 0) * gizmosLength;
+					Vector3 lineEndExtention = lineEnd + new Vector3(Mathf.Cos(vRot.z + hSpr), Mathf.Sin(vRot.z + hSpr), 0) * gizmosLength;
+					
+
+					// Gizmos.DrawLine(lineStart, lineEnd);
+					Gizmos.DrawLine(lineStart, lineStartExtention);
+					Gizmos.DrawLine(lineEnd, lineEndExtention);
+					
+					#if UNITY_EDITOR
+					Vector3 center = (lineEnd + lineStart) / 2;
+					float baseAngleRad = transform.eulerAngles.z * Mathf.Deg2Rad;
+					Vector3 bisectorDir = new Vector3(Mathf.Cos(baseAngleRad), Mathf.Sin(baseAngleRad), 0);
+					Vector3 bezierCenterTarget = center + bisectorDir * gizmosLength;
+					Vector3 chordMidpoint = (lineStartExtention + lineEndExtention) / 2f;
+					Vector3 controlPoint = (4f * bezierCenterTarget - chordMidpoint) / 3f;
+					Handles.DrawBezier(
+						lineStartExtention,
+						lineEndExtention,
+						controlPoint,
+						controlPoint,
+						Handles.color,
+						null,
+						2f
+					);
+					#endif
+
+					return;
+			}
+		}
+	}
+
+	void DrawBurst(Burst burst)
+	{
+		Gizmos.color = Color.red;
+		Vector3 vRot = transform.eulerAngles * Mathf.Deg2Rad; // stands for vector rotation
+		
+		// if there is NO spread
+		if (burst.spread == 0)
+		{
+			Vector3 Center = new Vector3(Mathf.Cos(vRot.z), Mathf.Sin(vRot.z), 0) * gizmosLength;
+
+			switch (spawnShape)
+			{
+				// point, no spread
+				case SpawnShape.Point:
+
+					Gizmos.DrawLine(transform.position, transform.position + Center);
+
+					for (int i = 0; i < burst.projectileNum; i++)
+					{
+						Gizmos.DrawSphere(transform.position + Center * (i+1)/(burst.projectileNum+1), 0.05f);
+					}
+
+					return;
+				
+				// line, no spread
+				case SpawnShape.Line:
+					
+					Vector3 lineOffset = transform.right * gizmosLength;
+
+					if (burst.useEvenSpawn)
+					{
+						for (int i = 0; i < burst.projectileNum; i++)
+						{
+							float progression = i/((float) burst.projectileNum-1) - 0.5f;
+							Vector3 linePosition = transform.position + transform.up * spawnLineLength * progression;
+
+							Gizmos.DrawLine(linePosition, linePosition + lineOffset);
+						}
 					}
 					else
 					{
-						Vector3 lineOffset = transform.right * travelDistance;
+						float hLen = spawnLineLength / 2; // stands for half line length
+
+						Vector3 lineStart = transform.position - transform.up * hLen;
+						Vector3 lineEnd = transform.position + transform.up * hLen;
+
 						Gizmos.DrawLine(lineStart, lineStart + lineOffset);
 						Gizmos.DrawLine(lineEnd, lineEnd + lineOffset);
 						Gizmos.DrawLine(lineStart + lineOffset, lineEnd + lineOffset);
+						
+						for (int i = 0; i < burst.projectileNum; i++)
+						{
+							Gizmos.DrawSphere(transform.position + Center * (i+1)/(burst.projectileNum+1), 0.05f);
+						}
 					}
-					break;
+					return;
+
 			}
 		}
 
+		// if there is spread
+		else
+		{
+			float hSpr = burst.spread/2 * Mathf.Deg2Rad; // stands for half spread
+
+			Vector3 Center = new Vector3(Mathf.Cos(vRot.z), Mathf.Sin(vRot.z), 0) * gizmosLength;
+
+			switch(spawnShape)
+			{
+				// point, yes spread
+				case SpawnShape.Point:
+
+					if (burst.useDeterministicSpread)
+					{
+						for (int i = 0; i < burst.projectileNum; i++)
+						{
+							float progression = i/((float) burst.projectileNum-1) - 0.5f;
+							float angle = progression * burst.spread * Mathf.Deg2Rad;
+
+							Vector3 end = new Vector3(Mathf.Cos(vRot.z + angle), Mathf.Sin(vRot.z + angle), 0) * gizmosLength;
+
+							Gizmos.DrawLine(transform.position, transform.position + end);
+						}
+					}
+					else
+					{
+						Vector3 FirstEnd = new Vector3(Mathf.Cos(vRot.z + hSpr), Mathf.Sin(vRot.z + hSpr), 0) * gizmosLength;
+						Vector3 SecondEnd = new Vector3(Mathf.Cos(vRot.z - hSpr), Mathf.Sin(vRot.z - hSpr), 0) * gizmosLength;
+
+						Gizmos.DrawLine(transform.position, transform.position + FirstEnd);
+						Gizmos.DrawLine(transform.position, transform.position + SecondEnd);
+
+						#if UNITY_EDITOR
+							Handles.DrawWireArc(transform.position, Vector3.forward, FirstEnd, -burst.spread, gizmosLength);
+						#endif
+
+						for (int i = 0; i < burst.projectileNum; i++)
+						{
+							Gizmos.DrawSphere(transform.position + Center * (i+1)/(burst.projectileNum+1), 0.05f);
+						}
+					}
+					
+					return;
+
+				// line, yes spread
+				case SpawnShape.Line:
+
+					if (burst.useDeterministicSpread && burst.useEvenSpawn)
+					{
+						for (int i = 0; i < burst.projectileNum; i++)
+						{
+							float progression = i/((float) burst.projectileNum-1) - 0.5f;
+
+							Vector3 linePosition = transform.position + transform.up * spawnLineLength * progression;
+
+							float angle = progression * burst.spread * Mathf.Deg2Rad;
+							Vector3 lineEnd = new Vector3(Mathf.Cos(vRot.z + angle), Mathf.Sin(vRot.z + angle), 0) * gizmosLength;
+
+							Gizmos.DrawLine(linePosition, linePosition + lineEnd);
+						}
+					}
+					else
+					{
+						float hLen = spawnLineLength / 2; // stands for half line length
+
+						Vector3 lineStart = transform.position - transform.up * hLen;
+						Vector3 lineEnd = transform.position + transform.up * hLen;
+
+						Vector3 lineStartExtention = lineStart + new Vector3(Mathf.Cos(vRot.z - hSpr), Mathf.Sin(vRot.z - hSpr), 0) * gizmosLength;
+						Vector3 lineEndExtention = lineEnd + new Vector3(Mathf.Cos(vRot.z + hSpr), Mathf.Sin(vRot.z + hSpr), 0) * gizmosLength;
+						
+						Gizmos.DrawLine(lineStart, lineStartExtention);
+						Gizmos.DrawLine(lineEnd, lineEndExtention);
+						
+						#if UNITY_EDITOR
+							Vector3 center = (lineEnd + lineStart) / 2;
+							float baseAngleRad = transform.eulerAngles.z * Mathf.Deg2Rad;
+							Vector3 bisectorDir = new Vector3(Mathf.Cos(baseAngleRad), Mathf.Sin(baseAngleRad), 0);
+							Vector3 bezierCenterTarget = center + bisectorDir * gizmosLength;
+							Vector3 chordMidpoint = (lineStartExtention + lineEndExtention) / 2f;
+							Vector3 controlPoint = (4f * bezierCenterTarget - chordMidpoint) / 3f;
+							Handles.DrawBezier(
+								lineStartExtention,
+								lineEndExtention,
+								controlPoint,
+								controlPoint,
+								Handles.color,
+								null,
+								2f
+							);
+						#endif
+					}
+					
+					return;
+			}
+		}
 	}
 }
