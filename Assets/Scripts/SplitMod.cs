@@ -1,24 +1,27 @@
 using UnityEngine;
-using static UnityEngine.RuleTile.TilingRuleOutput;
 [System.Serializable]
 public class SplitMod : Mod
 {
-	[SerializeField] private GameObject projectilePrefab;
-	[SerializeField] private Mod[] splitMods;
-	[SerializeField] private int numSplitProjectiles;
-	[SerializeField] private bool uniformSplit;
-	[SerializeField] private float splitLifetime;
-	public override void End()
-	{
-		float currentAngle = 0;
-		for(int i=0; i<numSplitProjectiles; i++){
-			GameObject projectileGameObject = UnityEngine.Object.Instantiate(projectilePrefab, projectile.transform.position, Quaternion.Euler(new Vector3(0, 0, uniformSplit ? currentAngle:Random.Range(0,360))));
-			projectileGameObject.GetComponent<Projectile>().Initialize(splitLifetime,splitMods);
-			currentAngle += 360f / numSplitProjectiles;
-		}
-	}
-
+[SerializeField] private GameObject projectilePrefab;
+	[SerializeField] private int numberOfProjectiles = 2;
+	[SerializeField] private float splitProjectileLifetime = 2f;
+	[SerializeReference][SubclassSelector] private Mod[] splitProjectileMods; // the mods that will be applied to the projectile when it is spawned
 	public override void Run()
 	{
+	}
+	public override void End()
+	{
+		for (int i = 0; i < numberOfProjectiles; i++)
+		{
+			float angle = (360f / numberOfProjectiles) * i;
+			GameObject newProjectile = GameObject.Instantiate(projectilePrefab, projectile.transform.position, Quaternion.Euler(0, 0, angle));
+			Projectile newProjectileComponent = newProjectile.GetComponent<Projectile>();
+			Mod[] deepCopiedMods = new Mod[splitProjectileMods.Length];
+			for (int j = 0; j < splitProjectileMods.Length; j++)
+			{
+				deepCopiedMods[j] = (Mod)splitProjectileMods[j].Clone();
+			}
+			newProjectileComponent.Initialize(splitProjectileLifetime, deepCopiedMods, true);
+		}
 	}
 }

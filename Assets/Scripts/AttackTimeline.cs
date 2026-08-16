@@ -31,7 +31,7 @@ public class AttackTimeline : MonoBehaviour
     {
         // incriment time
         time += Time.fixedDeltaTime;
-
+        if (attackIndex >= attacks.Length) return;
         // check if its time to spawn the next attack
         if (time > attacks[attackIndex].commencement)
         {

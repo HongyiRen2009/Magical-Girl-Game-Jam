@@ -78,7 +78,7 @@ public class Attack : MonoBehaviour
 
 
 		float elapsed = 0; // time sense spray has started
-		float lastSpawn = 0; // time sense last projectile was spawned
+		float lastSpawn = firerate; // time sense last projectile was spawned
 
 		while (elapsed < duration)
 		{
