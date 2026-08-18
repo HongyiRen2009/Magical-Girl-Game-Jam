@@ -2994,6 +2994,64 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1773505608
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1773505610}
+  - component: {fileID: 1773505609}
+  m_Layer: 0
+  m_Name: Rhythm Game
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1773505609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1773505608}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9539d5157aac45842a4e94b560718195, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+  timeForNoteToReachTarget: 2
+  timeWindows:
+  - timeWindow: 0.1
+    scoreValue: 1000
+  - timeWindow: 0.2
+    scoreValue: 500
+  - timeWindow: 0.3
+    scoreValue: 100
+  - timeWindow: 0.4
+    scoreValue: 0
+  startYPosition: 5
+  targetYPosition: 0
+  notePrefab: {fileID: 5986738794403054878, guid: a0037e0cc2286744a80341672c06a70d, type: 3}
+  noteHitActions: {fileID: -3073730528549540538, guid: 1f4ad7d94a8d58144bda5d06c4f194a8, type: 3}
+--- !u!4 &1773505610
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1773505608}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -4.08279, y: 1.71153, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1797416825 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 408340474607822031, guid: c9a8a3e93ed119a4a9009d64793352a8, type: 3}
@@ -3936,3 +3994,4 @@ SceneRoots:
   - {fileID: 935304169}
   - {fileID: 1032764546}
   - {fileID: 277318665}
+  - {fileID: 1773505610}
