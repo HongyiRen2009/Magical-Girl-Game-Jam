@@ -4,24 +4,31 @@ using UnityEngine;
 [Serializable]
 public class AttackPackage
 {
-    [SerializeField] public Attack attack;
+    [SerializeField] public Spawn spawn;
     [SerializeField] public float commencement;
 }
 
 public class AttackTimeline : MonoBehaviour
 {
+    public static AttackTimeline current;
+
     [SerializeField] float time;
     int attackIndex;
 
-    [SerializeField] AttackPackage[] attacks;
+    [SerializeField] AttackPackage[] spawns;
+
+    void Awake()
+    {
+        current = this;
+    }
 
     void Start()
     {
         // sorts the array
-        Array.Sort(attacks, (a, b) => a.commencement.CompareTo(b.commencement));
+        Array.Sort(spawns, (a, b) => a.commencement.CompareTo(b.commencement));
         
         // if a dev is trying to start later in the level this moves the attack index to where it should be in the level at that point
-        while (time > attacks[attackIndex].commencement)
+        while (time > spawns[attackIndex].commencement)
         {
             attackIndex++;
         }
@@ -31,11 +38,13 @@ public class AttackTimeline : MonoBehaviour
     {
         // incriment time
         time += Time.fixedDeltaTime;
-        if (attackIndex >= attacks.Length) return;
+
+        if (attackIndex >= spawns.Length) return;
+
         // check if its time to spawn the next attack
-        if (time > attacks[attackIndex].commencement)
+        if (time > spawns[attackIndex].commencement)
         {
-            attacks[attackIndex].attack.ExecuteAttack();
+            spawns[attackIndex].spawn.Activate();
 
             attackIndex++;
         }

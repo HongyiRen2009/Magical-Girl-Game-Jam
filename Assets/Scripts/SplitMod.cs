@@ -21,7 +21,7 @@ public class SplitMod : Mod
 			{
 				deepCopiedMods[j] = (Mod)splitProjectileMods[j].Clone();
 			}
-			newProjectileComponent.Initialize(splitProjectileLifetime, deepCopiedMods, true);
+			newProjectileComponent.Initialize(splitProjectileLifetime, deepCopiedMods);
 		}
 	}
 }

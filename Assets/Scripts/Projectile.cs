@@ -11,25 +11,30 @@ public class Projectile : MonoBehaviour
     float age = 0; // the time that the bullet has been alive for
 
     [SerializeReference] [SubclassSelector] Mod[] mods; // any mods which will be applyed to the bullet
-
-    bool active = false;
-
-    [SerializeField] private bool parryable = false;
     private TelegraphMod telegraphMod;
 
-    public bool IsParryable => parryable;
-    public void Initialize(float lifetime = 0, Mod[] mods = null, bool active = true)
+    static float despawnDistance = 20;
+    static float sqrDespawnDistance => despawnDistance * despawnDistance;
+    Camera cameraMain;
+
+    public void Start()
+    {
+        cameraMain = Camera.main;
+    }
+
+    public void Initialize(float lifetime = 0, Mod[] mods = null)
     {
         this.lifetime = lifetime;
         this.mods = mods;
-        StartCoroutine(StartMods(active));
+
+        StartCoroutine(StartMods());
 	}
-    private IEnumerator StartMods(bool active)
+
+    private IEnumerator StartMods()
 	{
-        GetComponent<SpriteRenderer>().enabled = false;
 		foreach (Mod mod in mods)
 		{
-			if(mod is TelegraphMod){
+			if (mod is TelegraphMod){
                 mod.Begin(this);
                 telegraphMod = (TelegraphMod)mod;
 				yield return new WaitForSeconds(telegraphMod.telegraphDuration);
@@ -37,27 +42,27 @@ public class Projectile : MonoBehaviour
             }
 		}
 		// mods
-		foreach (Mod mod in mods)
+        foreach (Mod mod in mods)
 		{
-			// Debug.Log("running the begin func");
 			mod.Begin(this);
 		}
-
-		this.active = active;
-		GetComponent<SpriteRenderer>().enabled = active;
-
 	}
 
     void FixedUpdate()
     {
-		if (telegraphMod!=null)
+		if (telegraphMod != null)
 		{
             telegraphMod.Run();
 		}
-		if (!active) return;
+
         // lifetime check
         age += Time.fixedDeltaTime;
         if (lifetime > 0 && age > lifetime)
+        {
+            Despawn();
+        }
+
+        if ((cameraMain.transform.position - transform.position).sqrMagnitude > sqrDespawnDistance)
         {
             Despawn();
         }
@@ -66,16 +71,6 @@ public class Projectile : MonoBehaviour
         foreach (Mod mod in mods)
         {
             mod.Run();
-        }
-    }
-
-    void OnTriggerEnter2D(Collider2D collision)
-    {
-        if (active && collision.tag == "Player")
-        {
-            collision.GetComponent<PlayerMovement>().Damaged(gameObject);
-
-            Despawn();
         }
     }
 
@@ -89,7 +84,6 @@ public class Projectile : MonoBehaviour
 
         while (transform.childCount > 0)
         {
-            Debug.Log("releasing " + transform.GetChild(0));
             transform.GetChild(0).SetParent(transform.parent);
         }
 
@@ -109,7 +103,7 @@ public class Projectile : MonoBehaviour
     {
         foreach (Mod mod in mods)
         {
-            mod.DrawGizmos();
+            mod.DrawGizmos(gameObject);
         }
     }
 }

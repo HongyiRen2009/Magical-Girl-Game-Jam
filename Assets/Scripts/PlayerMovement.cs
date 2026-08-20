@@ -96,6 +96,8 @@ public class PlayerMovement : MonoBehaviour
 
         parryHitboxRestLocalPosition = parryHitbox.transform.localPosition;
         parryHitbox.enabled = false;
+
+        Debug.Log("setting the singleton");
         current = this;
     }
 
@@ -346,8 +348,10 @@ public class PlayerMovement : MonoBehaviour
     //if the player sits on a bullet they keep taking damage
     private void OnTriggerStay2D(Collider2D other)
     {
-        if (other.CompareTag("Bullet"))
-            Damaged(other.gameObject);
+        // update this.
+        
+        // if (other.CompareTag("Bullet"))
+        //     Damaged(other.gameObject);
     }
 
     private void RemoveBullet(GameObject bullet)
@@ -360,27 +364,29 @@ public class PlayerMovement : MonoBehaviour
             Destroy(bullet);
     }
 
-    public void Damaged(GameObject projectileObject)
+    public void Damaged(Hazard cause)
     {
-        Projectile projectile = projectileObject.GetComponentInParent<Projectile>();
+        // this will have to be updated. the argument "cause" will hold a public varaible called "parryable". That should be enough?
 
-        // While parrying, parryable bullets are destroyed
-        // Non parryable bullets pass through plauer
-        if (IsParrying)
-        {
-            if (projectile != null && projectile.IsParryable && TryParry())
-            {
-                projectile.Despawn();
-                Debug.Log("Parried!");
-            }
+        // Projectile projectile = projectileObject.GetComponentInParent<Projectile>();
 
-            return;
-        }
+        // // While parrying, parryable bullets are destroyed
+        // // Non parryable bullets pass through plauer
+        // if (IsParrying)
+        // {
+        //     if (projectile != null && projectile.IsParryable && TryParry())
+        //     {
+        //         projectile.Despawn();
+        //         Debug.Log("Parried!");
+        //     }
 
-        if (IsInvincible)
-            return;
+        //     return;
+        // }
 
-        StartIFrames(hitIFrameDuration);
-        Debug.Log("youch");
+        // if (IsInvincible)
+        //     return;
+
+        // StartIFrames(hitIFrameDuration);
+        // Debug.Log("youch");
     }
 }

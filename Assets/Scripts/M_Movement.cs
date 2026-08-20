@@ -1,16 +1,18 @@
 using System;
 using UnityEngine;
 using NaughtyAttributes;
-using Unity.VisualScripting;
-using Unity.Mathematics;
-using System.IO;
-using System.Runtime.CompilerServices;
+
+public enum PathStartTransformSetting
+{
+    keepGlobalPosition, // does not change the start whatsoever, it maintatins the position it was set to
+    setGlobalPosition, // sets the position of the start to the position of the projectile
+    transformGlobalPosition // moves the position of the start to the position of the projectile relitive to where it was to the origin. Probably dont do this on repeat
+}
 
 public enum PathFinishSetting
 {
     destroy,
-    moveByVelocity,
-    repeat
+    moveByVelocity
 }
 
 [Serializable]
@@ -34,14 +36,17 @@ public class M_Movement : Mod
     [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] float pinpointSpeed;
     [AllowNesting] [ShowIf("_pinpointing")] [SerializeField] float maxPSpeedDistance;
 
-    [AllowNesting] [ShowIf("followPath")] [SerializeField] Vector3 start;
-    [AllowNesting] [ShowIf("followPath")] [SerializeField] bool moveStartToPos;
-    [AllowNesting] [ShowIf("followPath")] [SerializeField] bool moveLocally = true;
-    [AllowNesting] [ShowIf("followPath")] [SerializeField] PathFinishSetting onFinish;
+    // starting transform settings
+    [Foldout("Start Transform Settings")] [AllowNesting] [ShowIf("followPath")] [SerializeField] Vector3 start; // this is the begining of the path
+    [Foldout("Start Transform Settings")] [AllowNesting] [ShowIf("followPath")] [SerializeField] PathStartTransformSetting startTransform; // this is the setting corrilating to how you want to move the start position relitive to the starting position of the projectile
+    [Foldout("Start Transform Settings")] [AllowNesting] [ShowIf("followPath")] [SerializeField] bool onlyMoveStart; // if true, the transform will only apply to the start position, if false the transform will apply to the whole path
 
-    bool _repeating => onFinish == PathFinishSetting.repeat;
-    [AllowNesting] [ShowIf("_repeating")] [SerializeField] float repeats; // if 0, repeats are infinite
-    [AllowNesting] [ShowIf("_repeating")] [SerializeField] bool maintainTransformOnRepeat;
+    // path completion settings
+    [Foldout("Path Completion Settings")] [AllowNesting] [ShowIf("followPath")] [SerializeField] PathFinishSetting onFinish;
+    [Foldout("Path Completion Settings")] [AllowNesting] [ShowIf("followPath")] [SerializeField] int repeats; // if -1 repeats happen infinitely
+    [Foldout("Path Completion Settings")] [AllowNesting] [ShowIf("followPath")] [SerializeField] PathStartTransformSetting repeatTransform; // will apply a transform setting on repeat
+
+    
 
     [Header("Points")] // show if doesnt work in this case so im just making it a seperate catagory
     [SerializeField] Point[] points;
@@ -52,7 +57,7 @@ public class M_Movement : Mod
     float elapsed = 0;
     int currentPoint = 0;
     Vector3 startPos;
-    Vector3 localOffset;
+    Vector3 localOrigin;
     int iteration;
     
 
@@ -60,16 +65,9 @@ public class M_Movement : Mod
     {
         base.Begin(projectile);
 
-        if (!moveStartToPos)
-        {
-            startPos = start;
-        }
-        else
-        {
-            startPos = start;
+        startPos = start;
 
-            TransformPath(projectile.transform.position - start);
-        }
+        ApplyStartTransform(startTransform);
     }
 
 	public override float GetTravelDistance(float lifeTime)
@@ -80,138 +78,181 @@ public class M_Movement : Mod
 
     public override void Run() 
     {
-        if (projectile.transform.parent != null && moveLocally)
+        if (projectile.transform.parent != null)
         {
-            Vector3 localChange = projectile.transform.parent.transform.position - localOffset;
-            localOffset += localChange;
+            Vector3 localChange = projectile.transform.parent.transform.position - localOrigin;
+            localOrigin += localChange;
 
             TransformPath(localChange);
         }
 
         if (followPath)
         {
-            elapsed += Time.fixedDeltaTime;
-
-            if (points.Length > currentPoint)
-            {
-                if (elapsed > points[currentPoint].time + points[currentPoint].wait)
-                {
-                    elapsed -= points[currentPoint].time + points[currentPoint].wait;
-                    currentPoint++;
-
-                    startPos = projectile.transform.position;
-                }
-
-                if (points.Length > currentPoint)
-                {
-                    points[currentPoint].PlaceBulletAlongPath(projectile, elapsed, startPos);
-                }
-            }
-            else
-            {
-                if (onFinish == PathFinishSetting.destroy)
-                {
-                    projectile.Despawn();
-                }
-                else if (onFinish == PathFinishSetting.moveByVelocity)
-                {
-                    followPath = false;
-                }
-                else if (onFinish == PathFinishSetting.repeat)
-                {
-                    iteration++;
-
-                    if (repeats > 0 && iteration > repeats)
-                    {
-                        projectile.Despawn();
-                        return;
-                    }
-
-                    elapsed = 0;
-                    currentPoint = 0;
-
-                    startPos = start;
-                    
-                    if (maintainTransformOnRepeat)
-                    {
-                        Vector3 change = projectile.transform.position - start;
-
-                        TransformPath(change);
-                    }
-
-                    if (points.Length > currentPoint)
-                    {
-                        Run();
-                    }
-                }
-            }
+            FollowPath();
         }
         else
         {
-            if (!(tracking && pinpointLocation))
-            {
-                projectile.transform.Translate(Vector3.right * speed * Time.fixedDeltaTime);
-                speed += acceleration * Time.fixedDeltaTime;
-
-                if (tracking)
-                {
-                    Vector3 direction = PlayerMovement.current.transform.position - projectile.transform.position;
-
-                    if (direction.normalized + projectile.transform.right == Vector3.zero)
-                    {
-                        direction.x += 1;
-                    }
-
-                    Vector3 newRight = Vector3.RotateTowards(projectile.transform.right, direction, rotationSpeed * Time.fixedDeltaTime, 0);
-
-                    newRight.z = 0;
-
-                    projectile.transform.right = newRight;
-                }
-            }
-            else
-            {
-                // projectile.transform.position = PlayerMovement.current.transform.position;
-
-                Vector3 pos1 = Vector3.zero;
-                Vector3 pos2 = Vector3.zero;
-
-                if (trackX)
-                {
-                    pos1 += Vector3.right * projectile.transform.position.x;
-                    pos2 += Vector3.right * PlayerMovement.current.transform.position.x;
-                }
-                if (trackY)
-                {
-                    pos1 += Vector3.up * projectile.transform.position.y;
-                    pos2 += Vector3.up * PlayerMovement.current.transform.position.y;
-                }
-
-                Vector3 direction = pos2 - pos1;
-                float distance = direction.magnitude;
-
-                float trackSpeed = Mathf.Pow(Mathf.Clamp01(distance/maxPSpeedDistance), 2);
-
-                projectile.transform.position += direction * trackSpeed * pinpointSpeed * Time.fixedDeltaTime;
-            }
+            MoveByVelocity();
         }
         
     }
 
+    void FollowPath()
+    {
+        elapsed += Time.fixedDeltaTime;
+
+        // if we are still have a point to go to
+        if (points.Length > currentPoint)
+        {
+            if (elapsed > points[currentPoint].time + points[currentPoint].wait)
+            {
+                elapsed -= points[currentPoint].time + points[currentPoint].wait;
+                currentPoint++;
+
+                startPos = projectile.transform.position;
+            }
+
+            if (points.Length > currentPoint)
+            {
+                points[currentPoint].PlaceBulletAlongPath(projectile, elapsed, startPos);
+            }
+        }
+
+        // if there is no other point to go to (path end/ repeat)
+        else
+        {
+            iteration++;
+
+            if (repeats != -1 && iteration > repeats)
+            {
+                EndPath();
+
+                return;
+            }
+
+            elapsed = 0;
+            currentPoint = 0;
+
+            startPos = start;
+
+            ApplyStartTransform(repeatTransform);
+
+            if (points.Length > 0) Run();
+        }
+    }
+
+    // preforms the instructed onFinish behavior
+    void EndPath()
+    {
+        switch (onFinish)
+        {
+            case PathFinishSetting.destroy:
+
+                projectile.Despawn();
+
+                return;
+            
+            case PathFinishSetting.moveByVelocity:
+
+                followPath = false;
+
+                return;
+        }
+    }
+
+    void MoveByVelocity()
+    {
+        if (!(tracking && pinpointLocation))
+        {
+            projectile.transform.Translate(Vector3.right * speed * Time.fixedDeltaTime);
+            speed += acceleration * Time.fixedDeltaTime;
+
+            if (tracking)
+            {
+                Vector3 direction = PlayerMovement.current.transform.position - projectile.transform.position;
+
+                if (direction.normalized + projectile.transform.right == Vector3.zero)
+                {
+                    direction.x += 1;
+                }
+
+                Vector3 newRight = Vector3.RotateTowards(projectile.transform.right, direction, rotationSpeed * Time.fixedDeltaTime, 0);
+
+                newRight.z = 0;
+
+                projectile.transform.right = newRight;
+            }
+        }
+        else
+        {
+            Vector3 pos1 = Vector3.zero;
+            Vector3 pos2 = Vector3.zero;
+
+            if (trackX)
+            {
+                pos1 += Vector3.right * projectile.transform.position.x;
+                pos2 += Vector3.right * PlayerMovement.current.transform.position.x;
+            }
+            if (trackY)
+            {
+                pos1 += Vector3.up * projectile.transform.position.y;
+                pos2 += Vector3.up * PlayerMovement.current.transform.position.y;
+            }
+
+            Vector3 direction = pos2 - pos1;
+            float distance = direction.magnitude;
+
+            float trackSpeed = Mathf.Pow(Mathf.Clamp01(distance/maxPSpeedDistance), 2);
+
+            projectile.transform.position += direction * trackSpeed * pinpointSpeed * Time.fixedDeltaTime;
+        }
+    }
+
     public override void OnTransformParentChanged()
     {
-        // start += localOffset;
-        // startPos += localOffset;
-
-        // foreach (Point point in points)
-        // {
-        //     point.position += localOffset;
-        // }
         if (projectile.transform.parent != null)
         {
-            localOffset = projectile.transform.parent.transform.position;
+            localOrigin = projectile.transform.parent.transform.position;
         }
         
+    }
+
+    void ApplyStartTransform(PathStartTransformSetting setting)
+    {
+        switch (setting)
+        {
+            case PathStartTransformSetting.keepGlobalPosition:
+
+                return;
+
+            case PathStartTransformSetting.setGlobalPosition:
+
+                Vector3 transform = projectile.transform.position - start;
+
+                if (onlyMoveStart)
+                {
+                    start += transform;
+                }
+                else
+                {
+                    TransformPath(transform);
+                }
+
+                return;
+            
+            case PathStartTransformSetting.transformGlobalPosition:
+
+                if (onlyMoveStart)
+                {
+                    start += projectile.transform.position;
+                }
+                else
+                {
+                    TransformPath(projectile.transform.position);
+                }
+
+                return;
+        }
     }
     
     void TransformPath(Vector3 change)
@@ -225,7 +266,22 @@ public class M_Movement : Mod
         }
     }
 
-    public override void DrawGizmos()
+    public override object Clone()
+    {
+        M_Movement clone = (M_Movement) MemberwiseClone();
+
+        Point[] pointsCopy = new Point[points.Length];
+		for (int i = 0; i < points.Length; i++)
+		{
+			pointsCopy[i] = (Point) points[i].Clone();
+		}
+
+        clone.points = pointsCopy;
+
+		return clone;
+    }
+
+    public override void DrawGizmos(GameObject modded)
     {
         if (!drawGizmos) return;
 
@@ -306,6 +362,11 @@ public class Point
         }
         
         projectile.transform.position = newPosition;
+    }
+
+    public object Clone()
+    {
+        return MemberwiseClone();
     }
 
     public Vector3 DrawGizmos(Vector3 previous)
