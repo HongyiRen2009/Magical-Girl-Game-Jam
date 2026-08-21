@@ -16,7 +16,7 @@ public class AttackTimeline : MonoBehaviour
     int attackIndex;
 
     [SerializeField] AttackPackage[] spawns;
-
+    [SerializeField] private AudioSource bgMusic;
     void Awake()
     {
         current = this;
@@ -24,6 +24,7 @@ public class AttackTimeline : MonoBehaviour
 
     void Start()
     {
+    bgMusic.time = time;
         // sorts the array
         Array.Sort(spawns, (a, b) => a.commencement.CompareTo(b.commencement));
         
