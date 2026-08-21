@@ -56,7 +56,7 @@ public class Attack
 	[ShowIf("spawnShape", SpawnShape.Line), Tooltip("How long the line that the bullets will spawn along is")] [SerializeField] public float spawnLineLength = 1; // the length of the line that the bullets will spawn along
 
 	[Header("Gizmos")]
-	[AllowNesting] [ShowIf("showGizmos")] [SerializeField] bool showSpray;
+	[AllowNesting] [SerializeField] bool showSpray;
 	[SerializeField] float gizmosLength = 2f;
 	
 
