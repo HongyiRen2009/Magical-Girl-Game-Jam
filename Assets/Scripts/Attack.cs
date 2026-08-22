@@ -56,7 +56,7 @@ public class Attack
 	[ShowIf("spawnShape", SpawnShape.Line), Tooltip("How long the line that the bullets will spawn along is")] [SerializeField] public float spawnLineLength = 1; // the length of the line that the bullets will spawn along
 
 	[Header("Gizmos")]
-	[AllowNesting] [SerializeField] bool showSpray;
+	[AllowNesting] [ShowIf("showGizmos")] [SerializeField] bool showSpray;
 	[SerializeField] float gizmosLength = 2f;
 	
 
@@ -333,7 +333,11 @@ public class Attack
 
 		Gizmos.color = Color.red;
 		Vector3 vRot = rotation.eulerAngles * Mathf.Deg2Rad; // stands for vector rotation
-		
+		float gizmosLength = 0;
+		foreach (Mod mod in mods)
+		{
+			gizmosLength = Mathf.Max(gizmosLength, mod.GetTravelDistance(lifetime));
+		}
 		// if there is NO spread
 		if (spread == 0)
 		{
@@ -439,7 +443,11 @@ public class Attack
 
 		Gizmos.color = Color.red;
 		Vector3 vRot = rotation.eulerAngles * Mathf.Deg2Rad; // stands for vector rotation
-		
+		float gizmosLength = 0;
+		foreach (Mod mod in mods)
+		{
+			gizmosLength = Mathf.Max(gizmosLength, mod.GetTravelDistance(lifetime));
+		}
 		// if there is NO spread
 		if (burst.spread == 0)
 		{
